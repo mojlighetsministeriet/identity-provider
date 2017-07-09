@@ -4,8 +4,8 @@ import (
 	"io/ioutil"
 	"testing"
 
+	"github.com/mojlighetsministeriet/identity-provider/account"
 	"github.com/mojlighetsministeriet/identity-provider/token"
-	"github.com/mojlighetsministeriet/identity-provider/users"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -20,13 +20,13 @@ func TestGenerateAndValidateToken(t *testing.T) {
 		t.Error("Failed to load public key fixtures/key.public")
 	}
 
-	user := users.User{
-		ID:    uuid.NewV4(),
+	account := account.Account{
+		ID:    uuid.NewV4().String(),
 		Email: "tech+testing@mojlighetsministeriet.se",
 		Roles: []string{"user"},
 	}
 
-	accessToken, err := token.Generate(privateKey, user)
+	accessToken, err := token.Generate(privateKey, account)
 	if err != nil {
 		t.Error("Failed to generate token", err)
 	}
@@ -37,13 +37,13 @@ func TestGenerateAndValidateToken(t *testing.T) {
 }
 
 func TestFailGenerateWithBadPrivateKey(t *testing.T) {
-	user := users.User{
-		ID:    uuid.NewV4(),
+	account := account.Account{
+		ID:    uuid.NewV4().String(),
 		Email: "tech+testing@mojlighetsministeriet.se",
 		Roles: []string{"user"},
 	}
 
-	_, err := token.Generate([]byte{1, 2, 3, 4}, user)
+	_, err := token.Generate([]byte{1, 2, 3, 4}, account)
 	if err == nil {
 		t.Error("Should have failed to generate token")
 	}
@@ -55,13 +55,13 @@ func TestFailValidateWithBadPublicKey(t *testing.T) {
 		t.Error("Failed to load private key fixtures/key.private")
 	}
 
-	user := users.User{
-		ID:    uuid.NewV4(),
+	account := account.Account{
+		ID:    uuid.NewV4().String(),
 		Email: "tech+testing@mojlighetsministeriet.se",
 		Roles: []string{"user"},
 	}
 
-	accessToken, err := token.Generate(privateKey, user)
+	accessToken, err := token.Generate(privateKey, account)
 	if err != nil {
 		t.Error("Failed to generate token", err)
 	}

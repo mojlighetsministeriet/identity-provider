@@ -5,17 +5,17 @@ import (
 
 	"github.com/SermoDigital/jose/crypto"
 	"github.com/SermoDigital/jose/jws"
-	"github.com/mojlighetsministeriet/identity-provider/users"
+	"github.com/mojlighetsministeriet/identity-provider/account"
 )
 
 // Generate a new JWT token from a user
-func Generate(privateKey []byte, user users.User) (token []byte, err error) {
+func Generate(privateKey []byte, account account.Account) (token []byte, err error) {
 	claims := jws.Claims{}
 	claims.SetExpiration(time.Now().Add(time.Duration(60*20) * time.Second))
 
-	claims.Set("id", user.ID)
-	claims.Set("email", user.Email)
-	claims.Set("roles", user.Roles)
+	claims.Set("id", account.ID)
+	claims.Set("email", account.Email)
+	claims.Set("roles", account.Roles)
 
 	rsaPrivate, err := crypto.ParseRSAPrivateKeyFromPEM(privateKey)
 	if err != nil {
@@ -30,21 +30,18 @@ func Generate(privateKey []byte, user users.User) (token []byte, err error) {
 }
 
 // Validate a JWT token
-func Validate(publicKey []byte, token []byte) error {
+func Validate(publicKey []byte, token []byte) (err error) {
 	rsaPublic, err := crypto.ParseRSAPublicKeyFromPEM(publicKey)
 	if err != nil {
-		return err
+		return
 	}
 
 	jwt, err := jws.ParseJWT(token)
 	if err != nil {
-		return err
+		return
 	}
 
 	err = jwt.Validate(rsaPublic, crypto.SigningMethodRS256)
-	if err != nil {
-		return err
-	}
 
-	return err
+	return
 }
