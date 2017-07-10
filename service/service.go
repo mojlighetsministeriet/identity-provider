@@ -4,6 +4,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/pem"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -19,7 +21,7 @@ type Service struct {
 }
 
 func (service *Service) Initialize(databaseType string, databaseConnectionString string) (err error) {
-	if service.PrivateKey.Validate() != nil {
+	if service.PrivateKey == nil || service.PrivateKey.Validate() != nil {
 		service.setupPrivateKey()
 	}
 
@@ -38,46 +40,53 @@ func (service *Service) Close() {
 }
 
 func (service *Service) setupPrivateKey() {
-	var err error
-	var privateKey *rsa.PrivateKey
-
-	privateKeyString := os.Getenv("RSA_KEY")
-	if privateKeyString != "" {
-		privateKey, err = x509.ParsePKCS1PrivateKey([]byte(privateKeyString))
-		if err == nil {
-			service.PrivateKey = privateKey
-		}
+	privateKey, err := pemStringToPrivateKey(os.Getenv("RSA_PRIVATE_KEY"))
+	if err == nil {
+		service.PrivateKey = privateKey
 	}
 
-	privateKeyBytes, err := ioutil.ReadFile("key.private")
-	if len(privateKeyBytes) > 0 && err == nil {
-		privateKey, err = x509.ParsePKCS1PrivateKey(privateKeyBytes)
+	if service.PrivateKey == nil {
+		privateKeyBytes, err := ioutil.ReadFile("key.private")
 		if err == nil {
-			service.PrivateKey = privateKey
-		}
-	}
+			privateKey, err := pemStringToPrivateKey(string(privateKeyBytes))
 
-	if service.PrivateKey.Validate() != nil {
-		log.Print("Unable to find an RSA key as environment variable RSA_KEY or as the file key.private, generating a new key.private file")
+			if err == nil {
+				service.PrivateKey = privateKey
+			} else {
+				log.Print("Unable to find a valid RSA key as environment variable RSA_PRIVATE_KEY or as the file key.private, generating a new key.private file")
 
-		service.PrivateKey, err = rsa.GenerateKey(rand.Reader, 4096)
-		if err == nil {
-			err = ioutil.WriteFile(
-				"key.private",
-				x509.MarshalPKCS1PrivateKey(service.PrivateKey),
-				0600,
-			)
+				privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
+				if err == nil {
+					service.PrivateKey = privateKey
+					block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
 
-			if err != nil {
-				log.Fatal(err)
+					err = ioutil.WriteFile(
+						"key.private",
+						pem.EncodeToMemory(block),
+						0600,
+					)
+
+					if err != nil {
+						log.Fatal(err)
+					}
+				} else {
+					log.Fatal(err)
+				}
 			}
-		} else {
-			log.Fatal(err)
-		}
-
-		err = service.PrivateKey.Validate()
-		if err != nil {
-			log.Fatal(err)
 		}
 	}
+}
+
+func pemStringToPrivateKey(pemString string) (privateKey *rsa.PrivateKey, err error) {
+	block, _ := pem.Decode([]byte(pemString))
+	if block == nil {
+		err = errors.New("Unable to find private key in pemString")
+		return
+	} else if block.Type != "RSA PRIVATE KEY" {
+		err = errors.New("Unable to find private key in pemString, type found " + block.Type)
+		return
+	}
+
+	privateKey, err = x509.ParsePKCS1PrivateKey(block.Bytes)
+	return
 }

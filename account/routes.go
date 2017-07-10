@@ -67,6 +67,6 @@ func create(serviceInstance *service.Service) gin.HandlerFunc {
 			return
 		}
 
-		context.BindJSON(entity)
+		context.JSON(201, entity)
 	}
 }

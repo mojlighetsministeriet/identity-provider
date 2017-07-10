@@ -71,3 +71,8 @@ func LoadAccountFromEmailAndPassword(databaseConnection *gorm.DB, email string, 
 
 	return
 }
+
+func LoadAccountFromID(databaseConnection *gorm.DB, id string) (account Account, err error) {
+	err = databaseConnection.Where("id = ?", id).First(&account).Error
+	return
+}

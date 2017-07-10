@@ -1,2 +1,3 @@
 # identity-provider
-Stores users and allows for them to generate JWT tokens
+
+Handles the management of accounts and JWT tokens
