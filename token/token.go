@@ -4,35 +4,44 @@ import (
 	"crypto/rsa"
 	"time"
 
+	"github.com/mojlighetsministeriet/identity-provider/entity"
+
 	"github.com/SermoDigital/jose/crypto"
 	"github.com/SermoDigital/jose/jws"
-	"github.com/mojlighetsministeriet/identity-provider/account"
+	"github.com/SermoDigital/jose/jwt"
 )
 
 // Generate a new JWT token from a user
-func Generate(privateKey *rsa.PrivateKey, account account.Account) (token []byte, err error) {
+func Generate(privateKey *rsa.PrivateKey, account entity.Account) (serializedToken []byte, err error) {
 	claims := jws.Claims{}
 	claims.SetExpiration(time.Now().Add(time.Duration(60*20) * time.Second))
 
-	claims.Set("sub", account.ID)
+	account.BeforeSave()
+
+	claims.Set("id", account.ID)
 	claims.Set("email", account.Email)
-	claims.Set("roles", account.Roles)
+	claims.Set("roles", account.RolesSerialized)
 
-	jwt := jws.NewJWT(claims, crypto.SigningMethodRS256)
+	token := jws.NewJWT(claims, crypto.SigningMethodRS256)
 
-	token, err = jwt.Serialize(privateKey)
+	serializedToken, err = token.Serialize(privateKey)
 
 	return
 }
 
-// Validate a JWT token
-func Validate(publicKey *rsa.PublicKey, token []byte) (err error) {
-	jwt, err := jws.ParseJWT(token)
+// ParseIfValid return a parsed JWT token if it is valid
+func ParseIfValid(publicKey *rsa.PublicKey, token []byte) (parsedToken jwt.JWT, err error) {
+	parsedToken, err = jws.ParseJWT(token)
 	if err != nil {
 		return
 	}
 
-	err = jwt.Validate(publicKey, crypto.SigningMethodRS256)
+	err = parsedToken.Validate(publicKey, crypto.SigningMethodRS256)
+	if err != nil {
+		claims := jws.Claims{}
+		claims.SetExpiration(time.Now().Add(time.Duration(60*20) * time.Second))
+		parsedToken = jws.NewJWT(claims, crypto.SigningMethodRS256)
+	}
 
 	return
 }

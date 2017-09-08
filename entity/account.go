@@ -1,21 +1,21 @@
-package account
+package entity
 
 import (
 	"strings"
 
 	"github.com/jinzhu/gorm"
-
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // Account represents an account that can be used to access the system
 type Account struct {
-	ID                 string   `json:"id" gorm:"not null;unique" validate:"uuid4,required"`
-	Email              string   `json:"email" gorm:"not null;unique" validate:"email,required"`
-	Roles              []string `json:"roles" gorm:"-"`
-	RolesSerialized    string   `gorm:"roles"`
-	PasswordResetToken string   `json:"-"`
-	Password           string   `json:"-"`
+	ID                 uuid.UUID `json:"id" gorm:"not null;unique" validate:"uuid4,required"`
+	Email              string    `json:"email" gorm:"not null;unique" validate:"email,required"`
+	Roles              []string  `json:"roles" gorm:"-"`
+	RolesSerialized    string    `gorm:"roles"`
+	PasswordResetToken string    `json:"-"`
+	Password           string    `json:"-"`
 }
 
 // AccountWithPassword represents an account but includes a seriaziable password property
@@ -82,7 +82,7 @@ func LoadAccountFromEmailAndPassword(databaseConnection *gorm.DB, email string, 
 }
 
 // LoadAccountFromID will fetch the account from the persistence
-func LoadAccountFromID(databaseConnection *gorm.DB, id string) (account Account, err error) {
+func LoadAccountFromID(databaseConnection *gorm.DB, id uuid.UUID) (account Account, err error) {
 	err = databaseConnection.Where("id = ?", id).First(&account).Error
 	return
 }

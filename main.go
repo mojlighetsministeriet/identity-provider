@@ -1,31 +1,90 @@
 package main
 
 import (
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	uuid "github.com/satori/go.uuid"
+	"net/http"
+	"os"
 
-	"github.com/mojlighetsministeriet/identity-provider/account"
+	validator "gopkg.in/go-playground/validator.v9"
+
+	"github.com/jinzhu/copier"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	"github.com/labstack/echo"
+	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/service"
 	"github.com/mojlighetsministeriet/identity-provider/token"
+	uuid "github.com/satori/go.uuid"
 )
 
+func getenv(key, fallback string) string {
+	value := os.Getenv(key)
+
+	if len(value) == 0 {
+		return fallback
+	}
+
+	return value
+}
+
 func main() {
-	//databaseConnectionString := os.Getenv("DATABASE_CONNECTION")
-
-	serviceInstance := service.Service{}
-	defer serviceInstance.Close()
-
-	//err := serviceInstance.Initialize("mysql", databaseConnectionString)
-	err := serviceInstance.Initialize("sqlite3", "/tmp/identity-provider-test-"+uuid.NewV4().String()+".db")
+	identityService := service.Service{}
+	err := identityService.Initialize(getenv("DATABASE_TYPE", "sqlite3"), getenv("DATABASE_CREDENTIALS", "storage.db"))
 	if err != nil {
-		serviceInstance.Logger.Error("Unable to connect to database, please verify the connection string")
+		panic(err)
 	}
+	defer identityService.Close()
 
-	account.RegisterResource(&serviceInstance)
-	token.RegisterResource(&serviceInstance)
+	identityService.DatabaseConnection.AutoMigrate(&entity.Account{})
 
-	err = serviceInstance.Listen(":1323")
-	if err != nil {
-		serviceInstance.Logger.Error(err)
-	}
+	accountGroup := identityService.Router.Group("/account")
+	accountGroup.Use(token.JWTRequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "administrator"))
+
+	// TODO: Add better validation error messages
+	accountGroup.POST("", func(context echo.Context) error {
+		entityWithPassword := entity.AccountWithPassword{}
+		err := context.Bind(&entityWithPassword)
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		account := entity.Account{}
+		copier.Copy(&account, &entityWithPassword)
+
+		if account.Password != "" {
+			account.SetPassword(account.Password)
+		}
+
+		if account.ID.String() == "00000000-0000-0000-0000-000000000000" {
+			account.ID = uuid.NewV4()
+		}
+
+		validate := validator.New()
+		err = validate.Struct(account)
+
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		err = identityService.DatabaseConnection.Create(account).Error
+
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		return context.JSON(http.StatusCreated, account)
+	})
+
+	accountGroup.GET("", func(context echo.Context) error {
+		var entities []entity.Account
+
+		err := identityService.DatabaseConnection.Find(&entities).Error
+		if err == nil {
+			return context.JSON(http.StatusOK, entities)
+		}
+
+		identityService.Log.Error(err)
+		return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+	})
+
+	identityService.Listen(":1323")
 }
