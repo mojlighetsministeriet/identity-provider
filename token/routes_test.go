@@ -1,4 +1,4 @@
-package service_test
+package token
 
 import (
 	"testing"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestInitialize(t *testing.T) {
+func TestRegisterResource(t *testing.T) {
 	serviceInstance := service.Service{}
 	defer serviceInstance.Close()
 

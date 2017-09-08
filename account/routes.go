@@ -1,16 +1,17 @@
 package account
 
 import (
-	"log"
+	"net/http"
 
 	validator "gopkg.in/go-playground/validator.v9"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/copier"
+	"github.com/labstack/echo"
 	"github.com/mojlighetsministeriet/identity-provider/service"
 	uuid "github.com/satori/go.uuid"
 )
 
+// RegisterResource will register this resource to the HTTP service
 func RegisterResource(serviceInstance *service.Service) {
 	serviceInstance.DatabaseConnection.AutoMigrate(&Account{})
 
@@ -18,27 +19,26 @@ func RegisterResource(serviceInstance *service.Service) {
 	serviceInstance.Router.POST("/account", create(serviceInstance))
 }
 
-func list(serviceInstance *service.Service) gin.HandlerFunc {
-	return func(context *gin.Context) {
+func list(serviceInstance *service.Service) echo.HandlerFunc {
+	return func(context echo.Context) error {
 		var entities []Account
 
 		err := serviceInstance.DatabaseConnection.Find(&entities).Error
 		if err == nil {
-			context.JSON(200, entities)
-		} else {
-			log.Fatal(err)
-			context.AbortWithStatus(500)
+			return context.JSON(http.StatusOK, entities)
 		}
+
+		serviceInstance.Logger.Error(err)
+		return context.String(http.StatusInternalServerError, "Internal Server Error")
 	}
 }
 
-func create(serviceInstance *service.Service) gin.HandlerFunc {
-	return func(context *gin.Context) {
+func create(serviceInstance *service.Service) echo.HandlerFunc {
+	return func(context echo.Context) error {
 		entityWithPassword := AccountWithPassword{}
-		err := context.BindJSON(&entityWithPassword)
+		err := context.Bind(&entityWithPassword)
 		if err != nil {
-			context.AbortWithError(400, err)
-			return
+			return context.String(http.StatusBadRequest, err.Error())
 		}
 
 		entity := Account{}
@@ -56,17 +56,15 @@ func create(serviceInstance *service.Service) gin.HandlerFunc {
 		err = validate.Struct(entity)
 
 		if err != nil {
-			context.AbortWithError(400, err)
-			return
+			return context.String(http.StatusBadRequest, err.Error())
 		}
 
 		err = serviceInstance.DatabaseConnection.Create(entity).Error
 
 		if err != nil {
-			context.AbortWithError(400, err)
-			return
+			return context.String(http.StatusBadRequest, err.Error())
 		}
 
-		context.JSON(201, entity)
+		return context.JSON(http.StatusCreated, entity)
 	}
 }

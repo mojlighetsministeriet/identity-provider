@@ -7,34 +7,39 @@ import (
 	"encoding/pem"
 	"errors"
 	"io/ioutil"
-	"log"
 	"os"
 
-	"github.com/gin-gonic/gin"
 	"github.com/jinzhu/gorm"
+	"github.com/labstack/echo"
 )
 
+// Service is the main service that holds web server and database connections and so on
 type Service struct {
 	DatabaseConnection *gorm.DB
-	Router             *gin.Engine
+	Router             *echo.Echo
 	PrivateKey         *rsa.PrivateKey
+	Logger             echo.Logger
 }
 
+// Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
 func (service *Service) Initialize(databaseType string, databaseConnectionString string) (err error) {
 	if service.PrivateKey == nil || service.PrivateKey.Validate() != nil {
 		service.setupPrivateKey()
 	}
 
-	service.Router = gin.Default()
+	service.Router = echo.New()
+	service.Logger = service.Router.Logger
 	service.DatabaseConnection, err = gorm.Open(databaseType, databaseConnectionString)
 	return
 }
 
+// Listen will make the service start listning for incoming requests
 func (service *Service) Listen(address string) (err error) {
-	err = service.Router.Run(address)
+	service.Router.Logger.Error(service.Router.Start(address))
 	return
 }
 
+// Close will shut down the service and any of it's related components
 func (service *Service) Close() {
 	service.DatabaseConnection.Close()
 }
@@ -53,7 +58,7 @@ func (service *Service) setupPrivateKey() {
 			if err == nil {
 				service.PrivateKey = privateKey
 			} else {
-				log.Print("Unable to find a valid RSA key as environment variable RSA_PRIVATE_KEY or as the file key.private, generating a new key.private file")
+				service.Logger.Print("Unable to find a valid RSA key as environment variable RSA_PRIVATE_KEY or as the file key.private, generating a new key.private file")
 
 				privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
 				if err == nil {
@@ -67,12 +72,14 @@ func (service *Service) setupPrivateKey() {
 					)
 
 					if err != nil {
-						log.Fatal(err)
+						service.Logger.Error(err)
 					}
 				} else {
-					log.Fatal(err)
+					service.Logger.Error(err)
 				}
 			}
+		} else {
+			service.Logger.Error(err)
 		}
 	}
 }

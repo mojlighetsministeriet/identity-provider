@@ -1,11 +1,11 @@
 package token
 
 import (
-	"log"
+	"net/http"
 	"strings"
 
 	"github.com/SermoDigital/jose/jws"
-	"github.com/gin-gonic/gin"
+	"github.com/labstack/echo"
 	"github.com/mojlighetsministeriet/identity-provider/account"
 	"github.com/mojlighetsministeriet/identity-provider/service"
 )
@@ -21,88 +21,80 @@ type createTokenBody struct {
 	Password string `json:"password"`
 }
 
-func create(serviceInstance *service.Service) gin.HandlerFunc {
-	return func(context *gin.Context) {
+func create(serviceInstance *service.Service) echo.HandlerFunc {
+	return func(context echo.Context) error {
 		parameters := createTokenBody{}
-		context.BindJSON(&parameters)
+		context.Bind(&parameters)
 
 		account, err := account.LoadAccountFromEmailAndPassword(
 			serviceInstance.DatabaseConnection,
 			parameters.Email,
 			parameters.Password,
 		)
-
 		if err != nil {
-			context.AbortWithStatus(401)
-			return
+			serviceInstance.Logger.Error(err)
+			return context.JSON(http.StatusUnauthorized, false)
 		}
 
 		token, err := Generate(serviceInstance.PrivateKey, account)
-
 		if err != nil {
-			log.Fatal(err)
-			context.AbortWithStatus(500)
-			return
+			serviceInstance.Logger.Error(err)
+			return context.JSON(http.StatusInternalServerError, false)
 		}
 
-		context.JSON(201, struct {
+		return context.JSON(http.StatusCreated, struct {
 			Token string `json:"token"`
 		}{Token: string(token)})
 	}
 }
 
-func renew(serviceInstance *service.Service) gin.HandlerFunc {
-	return func(context *gin.Context) {
+func renew(serviceInstance *service.Service) echo.HandlerFunc {
+	return func(context echo.Context) error {
 		token := getTokenFromContext(context)
 
 		if Validate(&serviceInstance.PrivateKey.PublicKey, token) != nil {
-			context.AbortWithStatus(401)
-			return
+			return context.JSON(http.StatusUnauthorized, false)
 		}
 
 		jwt, err := jws.ParseJWT(token)
 		if err != nil {
-			context.AbortWithStatus(401)
-			return
+			serviceInstance.Logger.Error(err)
+			return context.JSON(http.StatusUnauthorized, false)
 		}
 
 		account, err := account.LoadAccountFromID(
 			serviceInstance.DatabaseConnection,
 			jwt.Claims().Get("sub").(string),
 		)
-
 		if err != nil {
-			log.Fatal(err)
-			context.AbortWithStatus(500)
-			return
+			serviceInstance.Logger.Error(err)
+			return context.JSON(http.StatusUnauthorized, false)
 		}
 
 		newToken, err := Generate(serviceInstance.PrivateKey, account)
-
 		if err != nil {
-			log.Fatal(err)
-			context.AbortWithStatus(500)
-			return
+			serviceInstance.Logger.Error(err)
+			return context.JSON(http.StatusUnauthorized, false)
 		}
 
-		context.JSON(201, struct {
+		return context.JSON(http.StatusCreated, struct {
 			Token string `json:"token"`
 		}{Token: string(newToken)})
 	}
 }
 
-func validate(serviceInstance *service.Service) gin.HandlerFunc {
-	return func(context *gin.Context) {
+func validate(serviceInstance *service.Service) echo.HandlerFunc {
+	return func(context echo.Context) error {
 		if Validate(&serviceInstance.PrivateKey.PublicKey, getTokenFromContext(context)) == nil {
-			context.AbortWithStatus(200)
-		} else {
-			context.AbortWithStatus(401)
+			return context.JSON(http.StatusOK, true)
 		}
+
+		return context.JSON(http.StatusUnauthorized, false)
 	}
 }
 
-func getTokenFromContext(context *gin.Context) (result []byte) {
-	token := context.GetHeader("Authorization")
+func getTokenFromContext(context echo.Context) (result []byte) {
+	token := context.Request().Header.Get("Authorization")
 	token = strings.Replace(token, "Bearer", "", -1)
 	token = strings.Trim(strings.Replace(token, "bearer", "", -1), " ")
 

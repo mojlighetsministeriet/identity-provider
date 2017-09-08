@@ -1,9 +1,8 @@
 package main
 
 import (
-	"log"
-
-	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	uuid "github.com/satori/go.uuid"
 
 	"github.com/mojlighetsministeriet/identity-provider/account"
 	"github.com/mojlighetsministeriet/identity-provider/service"
@@ -11,19 +10,22 @@ import (
 )
 
 func main() {
+	//databaseConnectionString := os.Getenv("DATABASE_CONNECTION")
+
 	serviceInstance := service.Service{}
 	defer serviceInstance.Close()
 
-	err := serviceInstance.Initialize("mysql", "root:hej256@/identity-provider?charset=utf8&parseTime=True&loc=Local")
+	//err := serviceInstance.Initialize("mysql", databaseConnectionString)
+	err := serviceInstance.Initialize("sqlite3", "/tmp/identity-provider-test-"+uuid.NewV4().String()+".db")
 	if err != nil {
-		log.Fatal(err)
+		serviceInstance.Logger.Error("Unable to connect to database, please verify the connection string")
 	}
 
 	account.RegisterResource(&serviceInstance)
 	token.RegisterResource(&serviceInstance)
 
-	err = serviceInstance.Listen(":8080")
+	err = serviceInstance.Listen(":1323")
 	if err != nil {
-		log.Fatal(err)
+		serviceInstance.Logger.Error(err)
 	}
 }
