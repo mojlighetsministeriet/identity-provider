@@ -1,11 +1,16 @@
 [![Build Status](https://travis-ci.org/mojlighetsministeriet/identity-provider.svg?branch=master)](https://travis-ci.org/mojlighetsministeriet/identity-provider)
+
 [![Coverage Status](https://coveralls.io/repos/github/mojlighetsministeriet/identity-provider/badge.svg?branch=master)](https://coveralls.io/github/mojlighetsministeriet/identity-provider?branch=master)
 
 # identity-provider
 
 Handles the management of accounts (properties id, email, roles and passwords) and JWT tokens. The service is meant to run with Docker and will need an external database service to persist the accounts to.
 
-**NOTE: This service is still in it's experimentall phase,** feel free to try it out, contribute pull requests but for now, expect the functionality to be somewhat limited. E.g. right now there is no way of creating the first administrator account yet. It will be added but we are not there yet. :) 
+**NOTE: This service is still in it's experimentall phase,** feel free to try it out, contribute pull requests but for now, expect the functionality to be somewhat limited. E.g. right now there is no way of creating the first administrator account yet. It will be added but we are not there yet. :)
+
+## Docker image
+
+Our docker image is avaliable here https://hub.docker.com/r/mojlighetsministeriet/identity-provider/.
 
 ## Try it out
 
@@ -15,9 +20,9 @@ Replace user, password, host, databasename below with credentials for a running 
 
 For production, make sure to set RSA_PRIVATE_KEY environment variable externally to keep active tokens valid when starting new containers of this image. If you skip this a new key will be generated each time a container is created (and it will not be able to read any previous client tokens).  
 
-## Help with creating a private RSA key
+## Creating a private RSA key
 
-Use the tool https://github.com/mojlighetsministeriet/rsa-private-key-generator, see the GitHub page for installtion/usage.
+If you do not have a favorite tool yet, use the tool we provide https://github.com/mojlighetsministeriet/rsa-private-key-generator, see the GitHub page for installtion/usage.
 
 ## Configuration
 
