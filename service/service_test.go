@@ -13,6 +13,6 @@ import (
 func TestServiceInitialize(test *testing.T) {
 	os.Setenv("RSA_PRIVATE_KEY_BITS", "512")
 	identityService := service.Service{}
-	err := identityService.Initialize("sqlite3wq", "test-storage-"+uuid.NewV4().String()+".db")
+	err := identityService.Initialize("sqlite3", "test-storage-"+uuid.NewV4().String()+".db")
 	assert.NoError(test, err)
 }
