@@ -104,6 +104,7 @@ You are of course still free to fork this repo and extend it but we will likely 
 - [ ] As a client I should be able to change any property on my own account so that I don't have to ask the system administrator about this.
 - [ ] As a client I should be able to reset my password through an email with a reset token so that I don't have to ask the system administrator about this.
 - [ ] As a client I should be able to choose for how long (within limits) my token should be valid when I create/renew
+- [ ] As a developer against the service I would like to see proper validation errors so that I can understand which input that I should try to correct
 
 ## License
 
