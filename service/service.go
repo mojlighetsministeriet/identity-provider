@@ -63,7 +63,7 @@ func (service *Service) setupPrivateKey() {
 		}
 
 		if service.PrivateKey == nil {
-			service.Log.Print("Unable to find a valid RSA key as environment variable RSA_PRIVATE_KEY or as the file key.private, generating a new key.private file")
+			service.Log.Info("Unable to find a valid RSA key as environment variable RSA_PRIVATE_KEY or as the file key.private, generating a new key.private file")
 
 			privateKey, err = rsa.GenerateKey(rand.Reader, utils.GetenvInt("RSA_PRIVATE_KEY_BITS", 4096))
 			if err == nil {
