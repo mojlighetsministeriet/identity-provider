@@ -3,16 +3,15 @@ sudo: required
 language: go
 
 go:
-  - 1.9.x
+  - 1.8
 
 services:
   - docker
 
 after_success:
-  - docker login -e $DOCKER_EMAIL -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
+  - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
   - export REPO=mojlighetsministeriet/identity-provider
-  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
-  - docker build -f Dockerfile -t $REPO:$COMMIT .
-  - docker tag $REPO:$COMMIT $REPO:$TAG
+  - docker build -f Dockerfile -t $REPO .
+  - docker tag $REPO:$COMMIT $REPO
   - docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
   - docker push $REPO
