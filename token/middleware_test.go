@@ -6,7 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/SermoDigital/jose/crypto"
+	"github.com/SermoDigital/jose/jws"
 	"github.com/labstack/echo"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/token"
@@ -52,7 +55,7 @@ func TestJWTRequiredRoleMiddlewareWhenMissingAuthorizationToken(test *testing.T)
 	}))
 	handler(context)
 
-	assert.Equal(test, recorder.Result().StatusCode, http.StatusUnauthorized)
+	assert.Equal(test, http.StatusUnauthorized, recorder.Result().StatusCode)
 }
 
 func TestJWTRequiredRoleMiddlewareWhenMissingRequiredAdministratorRole(test *testing.T) {
@@ -79,7 +82,7 @@ func TestJWTRequiredRoleMiddlewareWhenMissingRequiredAdministratorRole(test *tes
 	}))
 	handler(context)
 
-	assert.Equal(test, recorder.Result().StatusCode, http.StatusForbidden)
+	assert.Equal(test, http.StatusForbidden, recorder.Result().StatusCode)
 }
 
 func TestJWTRequiredRoleMiddlewareWithRequiredAdministratorRole(test *testing.T) {
@@ -106,5 +109,33 @@ func TestJWTRequiredRoleMiddlewareWithRequiredAdministratorRole(test *testing.T)
 	}))
 	handler(context)
 
-	assert.Equal(test, recorder.Result().StatusCode, http.StatusOK)
+	assert.Equal(test, http.StatusOK, recorder.Result().StatusCode)
+}
+
+func TestJWTRequiredRoleMiddlewareWithInvalidTokenFormat(test *testing.T) {
+	server := echo.New()
+	request := httptest.NewRequest(echo.GET, "/", nil)
+	recorder := httptest.NewRecorder()
+	context := server.NewContext(request, recorder)
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 512)
+	assert.NoError(test, err)
+
+	claims := jws.Claims{}
+	claims.SetExpiration(time.Now().Add(time.Duration(60*20) * time.Second))
+
+	claims.Set("sub", uuid.NewV4())
+	claims.Set("email", "email")
+
+	serializedToken, err := jws.NewJWT(claims, crypto.SigningMethodRS256).Serialize(privateKey)
+
+	assert.NoError(test, err)
+	request.Header.Set(echo.HeaderAuthorization, "Bearer "+string(serializedToken))
+
+	middleware := token.JWTRequiredRoleMiddleware(&privateKey.PublicKey, "administrator")
+	handler := middleware(echo.HandlerFunc(func(context echo.Context) error {
+		return context.NoContent(http.StatusOK)
+	}))
+	handler(context)
+	assert.Equal(test, http.StatusForbidden, recorder.Result().StatusCode)
 }
