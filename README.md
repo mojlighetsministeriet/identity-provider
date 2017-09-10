@@ -4,9 +4,16 @@
 
 # identity-provider
 
-Handles the management of accounts (properties id, email, roles and passwords) and JWT tokens. The service is meant to run with Docker and will need an external database service to persist the accounts to.
+Handles the management of accounts (with the properties id, email, roles and passwords) and authentication/authorization with JWT tokens. The service is meant to run with Docker and will need an external database service to persist the accounts to.
 
 **NOTE: This service is still in it's experimentall phase,** feel free to try it out, contribute pull requests but for now, expect the functionality to be somewhat limited. E.g. right now there is no way of creating the first administrator account yet. It will be added but we are not there yet. :)
+
+## Philosofy
+
+* This service should do as few things as possible but do them well.
+* This service should have as few customization options as humanly possible. There are so many well known alternatives out there that does these things but they require a week or more to get started with.
+* This service should come with reasonable and as many default settings as possible to reduce configuration hell.
+* This service is meant to run on Docker Swarm mode, it's okay to run it elsewhere but this is the main target.
 
 ## Docker image
 
@@ -83,6 +90,20 @@ Make sure that the client has a valid token from a previous account with the **a
 Make sure that the client has a valid token from a previous account with the **administrator** role and call
 
     GET http://localhost:1323/account
+
+## Can I add more properties to the account
+
+This service is not intended to have any more properties, it is intended to be the bare minimum required for authentication. The intention is to use this service together with another service that keeps track of the account id and a person/organization/service or whatever you want to relate to the accounts.
+
+You are of course still free to fork this repo and extend it but we will likely not add those kinds of features back to this service. We do however encurage you to contribute features that relates to the core features.
+
+## TODO (things that has yet to be implemented) feel free to contribute or add more as issues on GitHub
+
+- [ ] Get test coverage up to 100%, the parts that is left are mostly the HTTP routing functions
+- [ ] As a system administrator I would like to be able to create one initial administration account without inserting directly into the database tables so that I can easily get started when setting up this service in production.
+- [ ] As a client I should be able to change any property on my own account so that I don't have to ask the system administrator about this.
+- [ ] As a client I should be able to reset my password through an email with a reset token so that I don't have to ask the system administrator about this.
+- [ ] As a client I should be able to choose for how long (within limits) my token should be valid when I create/renew
 
 ## License
 
