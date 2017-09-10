@@ -2,6 +2,7 @@ package main
 
 import (
 	"net/http"
+	"strings"
 
 	validator "gopkg.in/go-playground/validator.v9"
 
@@ -139,6 +140,25 @@ func main() {
 		}
 
 		return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"The token is invalid\"}"))
+	})
+
+	type routeInfo struct {
+		Path   string `json:"path"`
+		Method string `json:"method"`
+	}
+	var registeredRoutes []routeInfo
+	for _, route := range identityService.Router.Routes() {
+		if !strings.HasSuffix(route.Path, "/*") {
+			registeredRoute := routeInfo{
+				Path:   route.Path,
+				Method: route.Method,
+			}
+			registeredRoutes = append(registeredRoutes, registeredRoute)
+		}
+	}
+
+	identityService.Router.GET("/", func(context echo.Context) error {
+		return context.JSON(http.StatusOK, registeredRoutes)
 	})
 
 	identityService.Listen(":1323")
