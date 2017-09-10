@@ -11,7 +11,7 @@ services:
 after_success:
   - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
   - export REPO=mojlighetsministeriet/identity-provider
+  - cp $TRAVIS_TEST_RESULT/identity-provider .
   - docker build -f Dockerfile -t $REPO .
-  - docker tag $REPO:$COMMIT $REPO
-  - docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
+  - docker tag $REPO $REPO:travis-$TRAVIS_BUILD_NUMBER
   - docker push $REPO
