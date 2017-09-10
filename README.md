@@ -30,3 +30,7 @@ The supported types are mysql, postgres, mssql. The default value is mysql.
 ### DATABASE
 
 The database connection string, the service uses the package GORM and to see details about the connection string format (depending on database type) see http://jinzhu.me/gorm/database.html.
+
+## License
+
+All the code in this project goes under the license GPLv3 (https://www.gnu.org/licenses/gpl-3.0.en.html).
