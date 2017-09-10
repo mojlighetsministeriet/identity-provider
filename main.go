@@ -7,7 +7,9 @@ import (
 	validator "gopkg.in/go-playground/validator.v9"
 
 	"github.com/jinzhu/copier"
+	_ "github.com/jinzhu/gorm/dialects/mssql"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
+	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/labstack/echo"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/service"
