@@ -25,7 +25,9 @@ func main() {
 		utils.Getenv("DATABASE", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Local"),
 	)
 	if err != nil {
-		panic(err)
+		identityService.Log.Error("Failed to initialize the service, make sure that you provided the correct database credentials.")
+		identityService.Log.Error(err)
+		panic("Cannot continue due to above errors.")
 	}
 	defer identityService.Close()
 
