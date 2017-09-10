@@ -6,7 +6,7 @@
 
 Handles the management of accounts (with the properties id, email, roles and passwords) and authentication/authorization with JWT tokens. The service is meant to run with Docker and will need an external database service to persist the accounts to.
 
-**NOTE: This service is still in it's experimentall phase,** feel free to try it out, contribute pull requests but for now, expect the functionality to be somewhat limited. E.g. right now there is no way of creating the first administrator account yet. It will be added but we are not there yet. :)
+**NOTE: This service is still in it's experimental phase,** feel free to try it out, contribute pull requests but for now, expect the functionality to be somewhat limited. E.g. right now there is no way of creating the first administrator account yet. It will be added but we are not there yet. :)
 
 ## Philosofy
 
