@@ -7,7 +7,6 @@ import (
 
 	"github.com/jinzhu/copier"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/labstack/echo"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/service"
@@ -18,7 +17,10 @@ import (
 
 func main() {
 	identityService := service.Service{}
-	err := identityService.Initialize(utils.Getenv("DATABASE_TYPE", "sqlite3"), utils.Getenv("DATABASE_CREDENTIALS", "storage.db"))
+	err := identityService.Initialize(
+		utils.Getenv("DATABASE_TYPE", "mysql"),
+		utils.Getenv("DATABASE", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Local"),
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -73,6 +75,70 @@ func main() {
 
 		identityService.Log.Error(err)
 		return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+	})
+
+	tokenGroup := identityService.Router.Group("/token")
+
+	tokenGroup.POST("", func(context echo.Context) error {
+		type createTokenBody struct {
+			Email    string `json:"email"`
+			Password string `json:"password"`
+		}
+
+		parameters := createTokenBody{}
+		context.Bind(&parameters)
+
+		account, err := entity.LoadAccountFromEmailAndPassword(identityService.DatabaseConnection, parameters.Email, parameters.Password)
+		if err != nil {
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
+		}
+
+		newToken, err := token.Generate(identityService.PrivateKey, account)
+		if err != nil {
+			identityService.Log.Error(err)
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
+
+		return context.JSON(http.StatusCreated, struct {
+			Token string `json:"token"`
+		}{Token: string(newToken)})
+	})
+
+	tokenGroup.POST("/renew", func(context echo.Context) error {
+		parsedToken, err := token.ParseIfValid(&identityService.PrivateKey.PublicKey, token.GetTokenFromContext(context))
+		if err != nil {
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
+		}
+
+		idClaim := parsedToken.Claims().Get("id").(string)
+		id, err := uuid.FromString(idClaim)
+		if err != nil {
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
+		}
+
+		account, err := entity.LoadAccountFromID(identityService.DatabaseConnection, id)
+		if err != nil {
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
+		}
+
+		newToken, err := token.Generate(identityService.PrivateKey, account)
+		if err != nil {
+			identityService.Log.Error(err)
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
+
+		return context.JSON(http.StatusCreated, struct {
+			Token string `json:"token"`
+		}{Token: string(newToken)})
+	})
+
+	tokenGroup.POST("/validate", func(context echo.Context) error {
+		_, err := token.ParseIfValid(&identityService.PrivateKey.PublicKey, token.GetTokenFromContext(context))
+		if err == nil {
+			return context.JSONBlob(http.StatusOK, []byte("{\"message\":\"The token is valid\"}"))
+		}
+
+		return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"The token is invalid\"}"))
 	})
 
 	identityService.Listen(":1323")
