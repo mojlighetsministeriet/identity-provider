@@ -4,6 +4,7 @@ language: go
 
 go:
   - 1.8
+  - tip
 
 services:
   - docker
@@ -16,6 +17,7 @@ script:
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
 
 after_success:
+  - coveralls
   - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
   - export REPO=mojlighetsministeriet/identity-provider
   - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
