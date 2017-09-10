@@ -7,7 +7,9 @@ Handles the management of accounts (properties id, email, roles and passwords) a
 
 ## Try it out
 
-    $ docker run --name identity-provider -p 1323:1323 -e DATABASE="root:hej256@/identity-provider?charset=utf8mb4,utf8&parseTime=True&loc=Local" identity-provider
+Replace user, password, databasename below with credentials for a running MySQL service and run the command.
+
+    $ docker run --name identity-provider -p 1323:1323 -e DATABASE="*user*:*password*@/*databasename*?charset=utf8mb4,utf8&parseTime=True&loc=Local" mojlighetsministeriet/identity-provider
 
 For production, make sure to set RSA_PRIVATE_KEY environment variable externally to keep active tokens valid when starting new containers of this image. If you skip this a new key will be generated each time a container is created (and it will not be able to read any previous client tokens).  
 
