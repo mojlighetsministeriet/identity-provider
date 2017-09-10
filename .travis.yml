@@ -13,7 +13,13 @@ env:
   global:
      - COMMIT=${TRAVIS_COMMIT::6}
 
+install:
+  - go get golang.org/x/tools/cmd/cover
+  - go get github.com/mattn/goveralls
+
 script:
+  - go test -v -covermode=count -coverprofile=coverage.out
+$HOME/gopath/bin/goveralls -coverprofile=coverage.out -service=travis-ci -repotoken $COVERALLS_TOKEN
   - CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
 
 after_success:
