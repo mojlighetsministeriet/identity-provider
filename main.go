@@ -2,7 +2,6 @@ package main
 
 import (
 	"net/http"
-	"os"
 
 	validator "gopkg.in/go-playground/validator.v9"
 
@@ -13,22 +12,13 @@ import (
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/service"
 	"github.com/mojlighetsministeriet/identity-provider/token"
+	"github.com/mojlighetsministeriet/identity-provider/utils"
 	uuid "github.com/satori/go.uuid"
 )
 
-func getenv(key, fallback string) string {
-	value := os.Getenv(key)
-
-	if len(value) == 0 {
-		return fallback
-	}
-
-	return value
-}
-
 func main() {
 	identityService := service.Service{}
-	err := identityService.Initialize(getenv("DATABASE_TYPE", "sqlite3"), getenv("DATABASE_CREDENTIALS", "storage.db"))
+	err := identityService.Initialize(utils.Getenv("DATABASE_TYPE", "sqlite3"), utils.Getenv("DATABASE_CREDENTIALS", "storage.db"))
 	if err != nil {
 		panic(err)
 	}
@@ -60,15 +50,14 @@ func main() {
 
 		validate := validator.New()
 		err = validate.Struct(account)
-
 		if err != nil {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
 		err = identityService.DatabaseConnection.Create(account).Error
-
 		if err != nil {
-			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+			identityService.Log.Error(err)
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
 
 		return context.JSON(http.StatusCreated, account)

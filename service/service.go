@@ -6,12 +6,12 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
+	"github.com/mojlighetsministeriet/identity-provider/utils"
 )
 
 // Service is the main service that holds web server and database connections and so on
@@ -63,11 +63,9 @@ func (service *Service) setupPrivateKey() {
 		}
 
 		if service.PrivateKey == nil {
-			fmt.Println("service.PrivateKey")
-			fmt.Println(service.PrivateKey)
 			service.Log.Print("Unable to find a valid RSA key as environment variable RSA_PRIVATE_KEY or as the file key.private, generating a new key.private file")
 
-			privateKey, err = rsa.GenerateKey(rand.Reader, 4096)
+			privateKey, err = rsa.GenerateKey(rand.Reader, utils.GetenvInt("RSA_PRIVATE_KEY_BITS", 4096))
 			if err == nil {
 				service.PrivateKey = privateKey
 				block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}

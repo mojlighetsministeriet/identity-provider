@@ -16,5 +16,5 @@
 # Other
 identity-provider
 key.private
-storage.db
+*.db
 tmp/
