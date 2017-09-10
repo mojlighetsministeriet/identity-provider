@@ -8,10 +8,19 @@ go:
 services:
   - docker
 
+env:
+  global:
+     - COMMIT=${TRAVIS_COMMIT::6}
+
+script:
+  - go build
+
 after_success:
   - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
   - export REPO=mojlighetsministeriet/identity-provider
-  - cp $TRAVIS_TEST_RESULT/identity-provider .
-  - docker build -f Dockerfile -t $REPO .
-  - docker tag $REPO $REPO:travis-$TRAVIS_BUILD_NUMBER
+  - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+  - echo $REPO:$TAG:$COMMIT
+  - docker build -f Dockerfile -t $REPO:$COMMIT .
+  - docker tag $REPO:$COMMIT $REPO:$TAG
+  - docker tag $REPO:$COMMIT $REPO:travis-$TRAVIS_BUILD_NUMBER
   - docker push $REPO
