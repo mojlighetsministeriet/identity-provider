@@ -1,6 +1,7 @@
 package main // import "github.com/mojlighetsministeriet/identity-provider"
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -23,6 +24,10 @@ func main() {
 	err := identityService.Initialize(
 		utils.Getenv("DATABASE_TYPE", "mysql"),
 		utils.Getenv("DATABASE", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"),
+		utils.Getenv("SMTP_HOST", ""),
+		utils.GetenvInt("SMTP_PORT", 0),
+		utils.Getenv("SMTP_EMAIL", ""),
+		utils.Getenv("SMTP_PASSWORD", ""),
 	)
 	if err != nil {
 		identityService.Log.Error("Failed to initialize the service, make sure that you provided the correct database credentials.")
@@ -42,15 +47,17 @@ func main() {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
-		// TODO: Add validation to input parameters
-		if entityWithPassword.Password == "" {
-			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
-		}
-
 		account := entity.Account{}
 		copier.Copy(&account, &entityWithPassword)
 
-		if account.Password != "" {
+		resetToken := uuid.NewV4().String()
+		if account.Password == "" {
+			err = account.SetPasswordResetToken(resetToken)
+			if err != nil {
+				identityService.Log.Error(err)
+				return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Internal Server Error\"}"))
+			}
+		} else {
 			err = account.SetPassword(account.Password)
 			if err != nil {
 				return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
@@ -78,6 +85,28 @@ func main() {
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
 
+		if account.Password == "" && account.PasswordResetToken != "" {
+			// TODO: Email templates should be taken from environment variables
+			err = identityService.Email.Send(
+				account.Email,
+				utils.Getenv("EMAIL_ACCOUNT_CREATED_SUBJECT", "Your new account"),
+				utils.Getenv(
+					"EMAIL_ACCOUNT_CREATED_BODY",
+					fmt.Sprintf(
+						"You have a new account, choose your password by visiting <a href=\"%s/reset-password/%s\" target=\"_blank\">%s/reset-password/%s</a>",
+						identityService.ExternalURL,
+						resetToken,
+						identityService.ExternalURL,
+						resetToken,
+					),
+				),
+			)
+
+			if err != nil {
+				identityService.Log.Error(err)
+			}
+		}
+
 		return context.JSONBlob(http.StatusCreated, []byte("{\"message\":\"Created\"}"))
 	})
 
@@ -93,7 +122,7 @@ func main() {
 		return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 	})
 
-	identityService.Router.POST("/account/:id/reset-password", func(context echo.Context) error {
+	identityService.Router.POST("/account/:id/password-reset", func(context echo.Context) error {
 		type resetPasswordBody struct {
 			ResetToken string `json:"resetToken"`
 			Password   string `json:"password"`
@@ -135,6 +164,62 @@ func main() {
 			identityService.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
+
+		return context.JSON(http.StatusOK, account)
+	})
+
+	identityService.Router.POST("/account/:id/reset-token", func(context echo.Context) error {
+		type emailBody struct {
+			Email string `json:"email"`
+		}
+
+		parameters := emailBody{}
+		context.Bind(&parameters)
+
+		account, err := entity.LoadAccountFromID(identityService.DatabaseConnection, context.Param("id"))
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		if account.Email != parameters.Email {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		resetToken := uuid.NewV4().String()
+		err = account.SetPasswordResetToken(resetToken)
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		validate := validator.New()
+		err = validate.Struct(account)
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		// TODO: Send email to user
+
+		err = identityService.DatabaseConnection.Save(&account).Error
+		if err != nil {
+			identityService.Log.Error(err)
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
+
+		// TODO: Email templates should be taken from environment variables
+		err = identityService.Email.Send(
+			account.Email,
+			utils.Getenv("EMAIL_ACCOUNT_RESET_SUBJECT", "Reset your password"),
+			utils.Getenv(
+				"EMAIL_ACCOUNT_RESET_BODY",
+				fmt.Sprintf(
+					"You have requested to reset your password, choose your new password by visiting <a href=\"%s/reset-password/%s\" target=\"_blank\">%s/reset-password/%s</a>. If you did not request a password reset you can ignore this message.",
+					identityService.ExternalURL,
+					resetToken,
+					identityService.ExternalURL,
+					resetToken,
+				),
+			),
+		)
 
 		return context.JSON(http.StatusOK, account)
 	})

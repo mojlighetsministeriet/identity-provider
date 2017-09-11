@@ -13,6 +13,7 @@ import (
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"github.com/labstack/gommon/log"
+	"github.com/mojlighetsministeriet/identity-provider/email"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/utils"
 	uuid "github.com/satori/go.uuid"
@@ -20,18 +21,27 @@ import (
 
 // Service is the main service that holds web server and database connections and so on
 type Service struct {
+	ExternalURL        string
 	DatabaseConnection *gorm.DB
 	Router             *echo.Echo
 	PrivateKey         *rsa.PrivateKey
 	Log                echo.Logger
+	Email              *email.SMTPSender
 }
 
 // Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
-func (service *Service) Initialize(databaseType string, databaseConnectionString string) (err error) {
+func (service *Service) Initialize(databaseType string, databaseConnectionString string, smtpHost string, smtpPort int, smtpEmail string, smtpPassword string) (err error) {
 	service.Router = echo.New()
 
 	service.Log = service.Router.Logger
 	service.Log.SetLevel(log.INFO)
+
+	service.Email = &email.SMTPSender{
+		Host:     smtpHost,
+		Port:     smtpPort,
+		Email:    smtpEmail,
+		Password: smtpPassword,
+	}
 
 	service.DatabaseConnection, err = gorm.Open(databaseType, databaseConnectionString)
 	if err != nil {
@@ -80,7 +90,7 @@ func (service *Service) setupAdministratorUserIfMissing() (err error) {
 
 	err = service.DatabaseConnection.Create(&administrator).Error
 	if err == nil {
-		service.Log.Info(fmt.Sprintf("No account with administrator found, created a new account with email %s and reset token %s, reset password by POST account/%s/reset-password { \"resetToken\": \"%s\", \"password\": \"yournewpassword\" }", administrator.Email, resetToken, administrator.ID, resetToken))
+		service.Log.Info(fmt.Sprintf("No account with administrator found, created a new account with email %s and reset token %s, reset password by POST account/%s/password-reset { \"resetToken\": \"%s\", \"password\": \"yournewpassword\" }", administrator.Email, resetToken, administrator.ID, resetToken))
 	}
 
 	return

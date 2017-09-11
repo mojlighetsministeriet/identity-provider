@@ -17,9 +17,18 @@ services:
         uid: "0"
         gid: "0"
         mode: 0400
+      - source: "smtp-password"
+        target: "smtp-password"
+        uid: "0"
+        gid: "0"
+        mode: 0400
     environment:
       DATABASE: "identity-provider:eUYP0mjoTt8YqCJBxa0bcrfN1miLzA@tcp(database:3306)/identity-provider"
-      RSA_PRIVATE_KEY: "/run/secrets/private-key"
+      RSA_PRIVATE_KEY: /run/secrets/private-key
+      SMTP_HOST: smtp.glesys.se,
+      SMTP_PORT: 587
+      SMTP_EMAIL: tech@mojlighetsministeriet.se
+      SMTP_PASSWORD: /run/secrets/smtp-password
     deploy:
       replicas: 2
       update_config:
@@ -68,3 +77,6 @@ secrets:
   private-key:
     external:
       name: "private-key"
+  smtp-password:
+    external:
+      name: "smtp-password"

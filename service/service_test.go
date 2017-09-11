@@ -15,6 +15,6 @@ func TestServiceInitialize(test *testing.T) {
 	storage := "test-storage-" + uuid.NewV4().String() + ".db"
 	defer os.Remove(storage)
 	identityService := service.Service{}
-	err := identityService.Initialize("sqlite3", storage)
+	err := identityService.Initialize("sqlite3", storage, "", 0, "", "")
 	assert.NoError(test, err)
 }
