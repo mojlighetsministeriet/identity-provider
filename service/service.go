@@ -6,12 +6,16 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"os"
 
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
+	"github.com/labstack/gommon/log"
+	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/utils"
+	uuid "github.com/satori/go.uuid"
 )
 
 // Service is the main service that holds web server and database connections and so on
@@ -25,8 +29,23 @@ type Service struct {
 // Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
 func (service *Service) Initialize(databaseType string, databaseConnectionString string) (err error) {
 	service.Router = echo.New()
+
 	service.Log = service.Router.Logger
+	service.Log.SetLevel(log.INFO)
+
 	service.DatabaseConnection, err = gorm.Open(databaseType, databaseConnectionString)
+	if err != nil {
+		return
+	}
+
+	service.DatabaseConnection.Debug()
+
+	err = service.DatabaseConnection.AutoMigrate(&entity.Account{}).Error
+	if err != nil {
+		return
+	}
+
+	service.setupAdministratorUserIfMissing()
 
 	if service.PrivateKey == nil || service.PrivateKey.Validate() != nil {
 		service.setupPrivateKey()
@@ -44,6 +63,27 @@ func (service *Service) Listen(address string) (err error) {
 // Close will shut down the service and any of it's related components
 func (service *Service) Close() {
 	service.DatabaseConnection.Close()
+}
+
+func (service *Service) setupAdministratorUserIfMissing() (err error) {
+	administrator := entity.Account{}
+
+	err = service.DatabaseConnection.Where("roles_serialized LIKE (?)", "administrator").First(&administrator).Error
+	if err == nil || err.Error() != "record not found" {
+		return
+	}
+
+	administrator.Email = "administrator@identity-provider.localhost"
+	administrator.Roles = []string{"user", "administrator"}
+	resetToken := uuid.NewV4().String()
+	administrator.SetPasswordResetToken(resetToken)
+
+	err = service.DatabaseConnection.Create(&administrator).Error
+	if err == nil {
+		service.Log.Info(fmt.Sprintf("No account with administrator found, created a new account with email %s and reset token %s, reset password by POST account/%s/reset-password { \"resetToken\": \"%s\", \"password\": \"yournewpassword\" }", administrator.Email, resetToken, administrator.ID, resetToken))
+	}
+
+	return
 }
 
 func (service *Service) setupPrivateKey() {

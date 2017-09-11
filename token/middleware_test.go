@@ -24,7 +24,7 @@ func TestGetTokenFromContext(test *testing.T) {
 	assert.NoError(test, err)
 
 	account := entity.Account{
-		ID:    uuid.NewV4(),
+		ID:    uuid.NewV4().String(),
 		Email: "tech+testing@mojlighetsministerietest.se",
 		Roles: []string{"user"},
 	}
@@ -68,7 +68,7 @@ func TestJWTRequiredRoleMiddlewareWhenMissingRequiredAdministratorRole(test *tes
 	assert.NoError(test, err)
 
 	account := entity.Account{
-		ID:    uuid.NewV4(),
+		ID:    uuid.NewV4().String(),
 		Email: "tech+testing@mojlighetsministerietest.se",
 		Roles: []string{"user"},
 	}
@@ -95,7 +95,7 @@ func TestJWTRequiredRoleMiddlewareWithRequiredAdministratorRole(test *testing.T)
 	assert.NoError(test, err)
 
 	account := entity.Account{
-		ID:    uuid.NewV4(),
+		ID:    uuid.NewV4().String(),
 		Email: "tech+testing@mojlighetsministerietest.se",
 		Roles: []string{"user", "administrator"},
 	}
@@ -124,7 +124,7 @@ func TestJWTRequiredRoleMiddlewareWithInvalidTokenFormat(test *testing.T) {
 	claims := jws.Claims{}
 	claims.SetExpiration(time.Now().Add(time.Duration(60*20) * time.Second))
 
-	claims.Set("sub", uuid.NewV4())
+	claims.Set("id", uuid.NewV4().String())
 	claims.Set("email", "email")
 
 	serializedToken, err := jws.NewJWT(claims, crypto.SigningMethodRS256).Serialize(privateKey)

@@ -27,11 +27,9 @@ func main() {
 	if err != nil {
 		identityService.Log.Error("Failed to initialize the service, make sure that you provided the correct database credentials.")
 		identityService.Log.Error(err)
-		panic("Cannot continue due to above errors.")
+		panic("Cannot continue due to previous errors.")
 	}
 	defer identityService.Close()
-
-	identityService.DatabaseConnection.AutoMigrate(&entity.Account{})
 
 	accountGroup := identityService.Router.Group("/account")
 	accountGroup.Use(token.JWTRequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "administrator"))
@@ -44,15 +42,23 @@ func main() {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
+		// TODO: Add validation to input parameters
+		if entityWithPassword.Password == "" {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
 		account := entity.Account{}
 		copier.Copy(&account, &entityWithPassword)
 
 		if account.Password != "" {
-			account.SetPassword(account.Password)
+			err = account.SetPassword(account.Password)
+			if err != nil {
+				return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+			}
 		}
 
-		if account.ID.String() == "00000000-0000-0000-0000-000000000000" {
-			account.ID = uuid.NewV4()
+		if account.ID == "" {
+			account.ID = uuid.NewV4().String()
 		}
 
 		validate := validator.New()
@@ -61,13 +67,18 @@ func main() {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
-		err = identityService.DatabaseConnection.Create(account).Error
+		err = identityService.DatabaseConnection.Create(&account).Error
 		if err != nil {
+			// TODO: handle for non-MySQL databases as well
+			if strings.HasPrefix(err.Error(), "Error 1062") {
+				return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"The email or id was already taken\"}"))
+			}
+
 			identityService.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
 
-		return context.JSON(http.StatusCreated, account)
+		return context.JSONBlob(http.StatusCreated, []byte("{\"message\":\"Created\"}"))
 	})
 
 	accountGroup.GET("", func(context echo.Context) error {
@@ -82,6 +93,52 @@ func main() {
 		return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 	})
 
+	identityService.Router.POST("/account/:id/reset-password", func(context echo.Context) error {
+		type resetPasswordBody struct {
+			ResetToken string `json:"resetToken"`
+			Password   string `json:"password"`
+		}
+
+		parameters := resetPasswordBody{}
+		context.Bind(&parameters)
+
+		// TODO: Add validation to input parameters
+		if parameters.ResetToken == "" || parameters.Password == "" {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		// TODO: Add validation to input parameters
+		if parameters.ResetToken == "" {
+			parameters.ResetToken = uuid.NewV4().String()
+		}
+
+		account, err := entity.LoadAccountFromID(identityService.DatabaseConnection, context.Param("id"))
+		if err != nil || account.CompareHashedPasswordResetTokenAgainst(parameters.ResetToken) != nil {
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
+		}
+
+		err = account.SetPassword(parameters.Password)
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+		account.PasswordResetToken = ""
+
+		validate := validator.New()
+		err = validate.Struct(account)
+
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		err = identityService.DatabaseConnection.Save(&account).Error
+		if err != nil {
+			identityService.Log.Error(err)
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
+
+		return context.JSON(http.StatusOK, account)
+	})
+
 	tokenGroup := identityService.Router.Group("/token")
 
 	tokenGroup.POST("", func(context echo.Context) error {
@@ -92,6 +149,12 @@ func main() {
 
 		parameters := createTokenBody{}
 		context.Bind(&parameters)
+
+		// TODO: Add validation to input parameters
+		// Set an invalid password if password was empty
+		if parameters.Password == "" {
+			parameters.Password = uuid.NewV4().String()
+		}
 
 		account, err := entity.LoadAccountFromEmailAndPassword(identityService.DatabaseConnection, parameters.Email, parameters.Password)
 		if err != nil {
@@ -115,12 +178,7 @@ func main() {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
 
-		idClaim := parsedToken.Claims().Get("id").(string)
-		id, err := uuid.FromString(idClaim)
-		if err != nil {
-			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
-		}
-
+		id := parsedToken.Claims().Get("id").(string)
 		account, err := entity.LoadAccountFromID(identityService.DatabaseConnection, id)
 		if err != nil {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))

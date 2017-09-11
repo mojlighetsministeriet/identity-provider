@@ -46,14 +46,14 @@ func TestAccountLoadAccountFromID(test *testing.T) {
 	err = databaseConnection.AutoMigrate(&entity.Account{}).Error
 	assert.NoError(test, err)
 
-	account := entity.Account{ID: uuid.NewV4(), Email: "user@example.com"}
+	account := entity.Account{ID: uuid.NewV4().String(), Email: "user@example.com"}
 	err = databaseConnection.Create(&account).Error
 	assert.NoError(test, err)
 
 	loadedAccount, err := entity.LoadAccountFromID(databaseConnection, account.ID)
 	assert.NoError(test, err)
 	assert.Equal(test, "user@example.com", loadedAccount.Email)
-	assert.Equal(test, account.ID.String(), loadedAccount.ID.String())
+	assert.Equal(test, account.ID, loadedAccount.ID)
 }
 
 func TestAccountLoadAccountFromEmailAndPassword(test *testing.T) {
@@ -64,7 +64,7 @@ func TestAccountLoadAccountFromEmailAndPassword(test *testing.T) {
 	err = databaseConnection.AutoMigrate(&entity.Account{}).Error
 	assert.NoError(test, err)
 
-	account := entity.Account{ID: uuid.NewV4(), Email: "user@example.com"}
+	account := entity.Account{ID: uuid.NewV4().String(), Email: "user@example.com"}
 	account.SetPassword("mysecretpassword")
 	err = databaseConnection.Create(&account).Error
 	assert.NoError(test, err)
@@ -72,7 +72,7 @@ func TestAccountLoadAccountFromEmailAndPassword(test *testing.T) {
 	loadedAccount, err := entity.LoadAccountFromEmailAndPassword(databaseConnection, account.Email, "mysecretpassword")
 	assert.NoError(test, err)
 	assert.Equal(test, "user@example.com", loadedAccount.Email)
-	assert.Equal(test, account.ID.String(), loadedAccount.ID.String())
+	assert.Equal(test, account.ID, loadedAccount.ID)
 }
 
 func TestAccountLoadAccountFromEmailAndPasswordWithInvalidPassword(test *testing.T) {
@@ -83,7 +83,7 @@ func TestAccountLoadAccountFromEmailAndPasswordWithInvalidPassword(test *testing
 	err = databaseConnection.AutoMigrate(&entity.Account{}).Error
 	assert.NoError(test, err)
 
-	account := entity.Account{ID: uuid.NewV4(), Email: "user@example.com"}
+	account := entity.Account{ID: uuid.NewV4().String(), Email: "user@example.com"}
 	account.SetPassword("mysecretpassword")
 	err = databaseConnection.Create(&account).Error
 	assert.NoError(test, err)
@@ -101,7 +101,7 @@ func TestAccountLoadAccountFromEmailAndPasswordWithInvalidEmail(test *testing.T)
 	err = databaseConnection.AutoMigrate(&entity.Account{}).Error
 	assert.NoError(test, err)
 
-	account := entity.Account{ID: uuid.NewV4(), Email: "user@example.com"}
+	account := entity.Account{ID: uuid.NewV4().String(), Email: "user@example.com"}
 	account.SetPassword("mysecretpassword")
 	err = databaseConnection.Create(&account).Error
 	assert.NoError(test, err)

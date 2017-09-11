@@ -16,7 +16,7 @@ func TestGenerateAndParseIfValid(test *testing.T) {
 	assert.NoError(test, err)
 
 	account := entity.Account{
-		ID:    uuid.NewV4(),
+		ID:    uuid.NewV4().String(),
 		Email: "tech+testing@mojlighetsministerietest.se",
 		Roles: []string{"user"},
 	}
@@ -26,7 +26,7 @@ func TestGenerateAndParseIfValid(test *testing.T) {
 
 	parsedToken, err := token.ParseIfValid(&privateKey.PublicKey, accessToken)
 	assert.NoError(test, err)
-	assert.Equal(test, account.ID.String(), parsedToken.Claims().Get("id"))
+	assert.Equal(test, account.ID, parsedToken.Claims().Get("id").(string))
 	assert.Equal(test, "tech+testing@mojlighetsministerietest.se", parsedToken.Claims().Get("email"))
 	assert.Equal(test, "user", parsedToken.Claims().Get("roles"))
 }
@@ -45,7 +45,7 @@ func TestFailParseIfValidWithBadPublicKey(test *testing.T) {
 	assert.NoError(test, err)
 
 	account := entity.Account{
-		ID:    uuid.NewV4(),
+		ID:    uuid.NewV4().String(),
 		Email: "tech+testing@mojlighetsministerietest.se",
 		Roles: []string{"user"},
 	}

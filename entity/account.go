@@ -10,12 +10,12 @@ import (
 
 // Account represents an account that can be used to access the system
 type Account struct {
-	ID                 uuid.UUID `json:"id" gorm:"not null;unique" validate:"uuid4,required"`
-	Email              string    `json:"email" gorm:"not null;unique" validate:"email,required"`
-	Roles              []string  `json:"roles" gorm:"-"`
-	RolesSerialized    string    `gorm:"roles"`
-	PasswordResetToken string    `json:"-"`
-	Password           string    `json:"-"`
+	ID                 string   `json:"id" gorm:"not null;unique;size:66" validate:"uuid4,required"`
+	Email              string   `json:"email" gorm:"not null;unique;size:100" validate:"email,required"`
+	Roles              []string `json:"roles" gorm:"-"`
+	RolesSerialized    string   `json:"-" gorm:"roles"`
+	PasswordResetToken string   `json:"-"`
+	Password           string   `json:"-"`
 }
 
 // AccountWithPassword represents an account but includes a seriaziable password property
@@ -26,6 +26,10 @@ type AccountWithPassword struct {
 
 // BeforeSave will run before the struct is persisted with gorm
 func (account *Account) BeforeSave() {
+	if account.ID == "" {
+		account.ID = uuid.NewV4().String()
+	}
+
 	account.RolesSerialized = strings.Join(account.Roles, ",")
 }
 
@@ -82,7 +86,7 @@ func LoadAccountFromEmailAndPassword(databaseConnection *gorm.DB, email string, 
 }
 
 // LoadAccountFromID will fetch the account from the persistence
-func LoadAccountFromID(databaseConnection *gorm.DB, id uuid.UUID) (account Account, err error) {
+func LoadAccountFromID(databaseConnection *gorm.DB, id string) (account Account, err error) {
 	err = databaseConnection.Where("id = ?", id).First(&account).Error
 	return
 }
