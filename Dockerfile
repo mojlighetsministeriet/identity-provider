@@ -13,6 +13,6 @@ COPY --from=0 /usr/local/go/lib/time/zoneinfo.zip /usr/local/go/lib/time/zoneinf
 COPY --from=0 /go/src/github.com/mojlighetsministeriet/identity-provider/identity-provider /
 ENV RSA_PRIVATE_KEY ""
 ENV DATABASE_TYPE "mysql"
-ENV DATABASE "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Local"
+ENV DATABASE "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"
 EXPOSE 1323
 ENTRYPOINT ["/identity-provider"]

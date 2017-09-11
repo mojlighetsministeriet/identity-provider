@@ -22,7 +22,7 @@ func main() {
 	identityService := service.Service{}
 	err := identityService.Initialize(
 		utils.Getenv("DATABASE_TYPE", "mysql"),
-		utils.Getenv("DATABASE", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Local"),
+		utils.Getenv("DATABASE", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"),
 	)
 	if err != nil {
 		identityService.Log.Error("Failed to initialize the service, make sure that you provided the correct database credentials.")
