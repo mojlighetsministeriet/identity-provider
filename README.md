@@ -21,11 +21,13 @@ Our docker image is avaliable here https://hub.docker.com/r/mojlighetsministerie
 
 ## Try it out
 
-Replace user, password, host, databasename below with credentials for a running MySQL service and run the command.
+How to run a test instance on Docker Swarm mode (to get rsa-private-key-generator see Creating a private RSA key below):
 
-    $ docker run --name identity-provider -p 1323:1323 -e DATABASE="*user*:*password*@*host*/*databasename*?charset=utf8mb4,utf8&parseTime=True&loc=Local" mojlighetsministeriet/identity-provider
-
-For production, make sure to set RSA_PRIVATE_KEY environment variable externally to keep active tokens valid when starting new containers of this image. If you skip this a new key will be generated each time a container is created (and it will not be able to read any previous client tokens).  
+    $ docker swarm init
+    $ rsa-private-key-generator > private.key
+    $ chmod 0600 private.key
+    $ docker secret create private-key key.private
+    $ docker stack deploy test --compose-file docker-compose.example.yml
 
 ## Creating a private RSA key
 

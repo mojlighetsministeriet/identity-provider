@@ -1,0 +1,70 @@
+version: "3.3"
+
+services:
+
+  identity-provider:
+    image: mojlighetsministeriet/identity-provider:latest
+    ports:
+      - 80:1323
+    networks:
+      - frontend
+      - backend
+    depends_on:
+      - database
+    secrets:
+      - source: "private-key"
+        target: "private-key"
+        uid: "0"
+        gid: "0"
+        mode: 0400
+    environment:
+      DATABASE: "identity-provider:eUYP0mjoTt8YqCJBxa0bcrfN1miLzA@tcp(database:3306)/identity-provider"
+      RSA_PRIVATE_KEY: "/run/secrets/private-key"
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
+
+  database:
+    image: mariadb:latest
+    ports:
+      - 3306:3306
+    volumes:
+      - database:/var/lib/mysql
+    networks:
+      - backend
+    environment:
+      - MYSQL_ROOT_PASSWORD=DPJmSHwL0UECg4DVGNybSVTHjcd3XU
+      - MYSQL_DATABASE=identity-provider
+      - MYSQL_USER=identity-provider
+      - MYSQL_PASSWORD=eUYP0mjoTt8YqCJBxa0bcrfN1miLzA
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+  visualizer:
+    image: dockersamples/visualizer:stable
+    ports:
+      - 8080:8080
+    stop_grace_period: 1m30s
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    deploy:
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  backend:
+    internal: true
+  frontend:
+
+volumes:
+  database:
+
+secrets:
+  private-key:
+    external:
+      name: "private-key"
