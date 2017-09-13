@@ -1,6 +1,10 @@
 package service_test
 
 import (
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"os"
 	"testing"
 
@@ -11,10 +15,15 @@ import (
 )
 
 func TestServiceInitialize(test *testing.T) {
-	os.Setenv("RSA_PRIVATE_KEY_BITS", "512")
 	storage := "test-storage-" + uuid.NewV4().String() + ".db"
 	defer os.Remove(storage)
+
+	privateKey, err := rsa.GenerateKey(rand.Reader, 512)
+	assert.NoError(test, err)
+	block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
+	pem := string(pem.EncodeToMemory(block))
+
 	identityService := service.Service{}
-	err := identityService.Initialize("sqlite3", storage, "", 0, "", "")
+	err = identityService.Initialize("sqlite3", storage, "", 0, "", "", pem)
 	assert.NoError(test, err)
 }

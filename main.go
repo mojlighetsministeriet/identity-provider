@@ -22,12 +22,13 @@ import (
 func main() {
 	identityService := service.Service{}
 	err := identityService.Initialize(
-		utils.Getenv("DATABASE_TYPE", "mysql"),
-		utils.Getenv("DATABASE", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"),
-		utils.Getenv("SMTP_HOST", ""),
-		utils.GetenvInt("SMTP_PORT", 0),
-		utils.Getenv("SMTP_EMAIL", ""),
-		utils.Getenv("SMTP_PASSWORD", ""),
+		utils.GetEnv("DATABASE_TYPE", "mysql"),
+		utils.GetFileAsString("/run/secrets/database-connection", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"),
+		utils.GetEnv("SMTP_HOST", ""),
+		utils.GetEnvInt("SMTP_PORT", 0),
+		utils.GetEnv("SMTP_EMAIL", ""),
+		utils.GetFileAsString("/run/secrets/smtp-password", ""),
+		utils.GetFileAsString("/run/secrets/private-key", ""),
 	)
 	if err != nil {
 		identityService.Log.Error("Failed to initialize the service, make sure that you provided the correct database credentials.")
@@ -89,8 +90,8 @@ func main() {
 			// TODO: Email templates should be taken from environment variables
 			err = identityService.Email.Send(
 				account.Email,
-				utils.Getenv("EMAIL_ACCOUNT_CREATED_SUBJECT", "Your new account"),
-				utils.Getenv(
+				utils.GetFileAsString("EMAIL_ACCOUNT_CREATED_SUBJECT", "Your new account"),
+				utils.GetFileAsString(
 					"EMAIL_ACCOUNT_CREATED_BODY",
 					fmt.Sprintf(
 						"You have a new account, choose your password by visiting <a href=\"%s/reset-password/%s\" target=\"_blank\">%s/reset-password/%s</a>",
@@ -208,8 +209,8 @@ func main() {
 		// TODO: Email templates should be taken from environment variables
 		err = identityService.Email.Send(
 			account.Email,
-			utils.Getenv("EMAIL_ACCOUNT_RESET_SUBJECT", "Reset your password"),
-			utils.Getenv(
+			utils.GetFileAsString("EMAIL_ACCOUNT_RESET_SUBJECT", "Reset your password"),
+			utils.GetFileAsString(
 				"EMAIL_ACCOUNT_RESET_BODY",
 				fmt.Sprintf(
 					"You have requested to reset your password, choose your new password by visiting <a href=\"%s/reset-password/%s\" target=\"_blank\">%s/reset-password/%s</a>. If you did not request a password reset you can ignore this message.",

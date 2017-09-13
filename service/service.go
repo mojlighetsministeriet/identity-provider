@@ -1,21 +1,17 @@
 package service
 
 import (
-	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
 
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
 	"github.com/labstack/gommon/log"
 	"github.com/mojlighetsministeriet/identity-provider/email"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
-	"github.com/mojlighetsministeriet/identity-provider/utils"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -30,7 +26,7 @@ type Service struct {
 }
 
 // Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
-func (service *Service) Initialize(databaseType string, databaseConnectionString string, smtpHost string, smtpPort int, smtpEmail string, smtpPassword string) (err error) {
+func (service *Service) Initialize(databaseType string, databaseConnectionString string, smtpHost string, smtpPort int, smtpEmail string, smtpPassword string, rsaKeyPEMString string) (err error) {
 	service.Router = echo.New()
 
 	service.Log = service.Router.Logger
@@ -58,7 +54,7 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 	service.setupAdministratorUserIfMissing()
 
 	if service.PrivateKey == nil || service.PrivateKey.Validate() != nil {
-		service.setupPrivateKey()
+		service.setupPrivateKey(rsaKeyPEMString)
 	}
 
 	return
@@ -96,44 +92,15 @@ func (service *Service) setupAdministratorUserIfMissing() (err error) {
 	return
 }
 
-func (service *Service) setupPrivateKey() {
-	privateKey, err := pemStringToPrivateKey(os.Getenv("RSA_PRIVATE_KEY"))
-	if err == nil {
-		service.PrivateKey = privateKey
+func (service *Service) setupPrivateKey(pemString string) (err error) {
+	privateKey, err := pemStringToPrivateKey(pemString)
+	if err != nil {
+		return
 	}
 
-	if service.PrivateKey == nil {
-		privateKeyBytes, err := ioutil.ReadFile("key.private")
+	service.PrivateKey = privateKey
 
-		if err == nil {
-			privateKey, err = pemStringToPrivateKey(string(privateKeyBytes))
-			if err == nil {
-				service.PrivateKey = privateKey
-			}
-		}
-
-		if service.PrivateKey == nil {
-			service.Log.Info("Unable to find a valid RSA key as environment variable RSA_PRIVATE_KEY or as the file key.private, generating a new key.private file")
-
-			privateKey, err = rsa.GenerateKey(rand.Reader, utils.GetenvInt("RSA_PRIVATE_KEY_BITS", 4096))
-			if err == nil {
-				service.PrivateKey = privateKey
-				block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(privateKey)}
-
-				err = ioutil.WriteFile(
-					"key.private",
-					pem.EncodeToMemory(block),
-					0600,
-				)
-
-				if err != nil {
-					service.Log.Error(err)
-				}
-			} else {
-				service.Log.Error(err)
-			}
-		}
-	}
+	return
 }
 
 func pemStringToPrivateKey(pemString string) (privateKey *rsa.PrivateKey, err error) {

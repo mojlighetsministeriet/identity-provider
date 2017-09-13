@@ -3,7 +3,7 @@ version: "3.3"
 services:
 
   identity-provider:
-    image: mojlighetsministeriet/identity-provider:latest
+    image: mojlighetsministeriet/identity-provider:master
     ports:
       - 80:1323
     networks:
@@ -12,28 +12,13 @@ services:
     depends_on:
       - database
     secrets:
-      - source: "private-key"
-        target: "private-key"
-        uid: "0"
-        gid: "0"
-        mode: 0400
-      - source: "smtp-password"
-        target: "smtp-password"
-        uid: "0"
-        gid: "0"
-        mode: 0400
-      - source: "database-connection-string"
-        target: "database-connection-string"
-        uid: "0"
-        gid: "0"
-        mode: 0400
+      - private-key
+      - smtp-password
+      - database-connection
     environment:
-      DATABASE: /run/secrets/database-connection-string
-      RSA_PRIVATE_KEY: /run/secrets/private-key
       SMTP_HOST: smtp.glesys.se
       SMTP_PORT: 587
-      SMTP_EMAIL: tech@mojlighetsministeriet.se
-      SMTP_PASSWORD: /run/secrets/smtp-password
+      SMTP_EMAIL: techsupport@mojlighetsministeriet.se
     deploy:
       replicas: 2
       update_config:
@@ -50,17 +35,11 @@ services:
       - database:/var/lib/mysql
     networks:
       - backend
-    secrets:
-      - source: "database-password"
-        target: "database-password"
-        uid: "0"
-        gid: "0"
-        mode: 0400
     environment:
-      MYSQL_ROOT_PASSWORD: /run/secrets/database-password
+      MYSQL_ROOT_PASSWORD: eUYP0mjoTt8YqCJBxa0bcrfN1miLzA
       MYSQL_DATABASE: identity-provider
       MYSQL_USER: identity-provider
-      MYSQL_PASSWORD: /run/secrets/database-password
+      MYSQL_PASSWORD: eUYP0mjoTt8YqCJBxa0bcrfN1miLzA
     deploy:
       placement:
         constraints: [node.role == manager]
@@ -91,9 +70,6 @@ secrets:
   smtp-password:
     external:
       name: "smtp-password"
-  database-password:
+  database-connection:
     external:
-      name: "database-password"
-  database-connection-string:
-    external:
-      name: "database-connection-string"
+      name: "database-connection"

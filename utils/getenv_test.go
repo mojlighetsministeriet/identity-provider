@@ -8,24 +8,24 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetenvWithMissingValueButWithDefault(test *testing.T) {
-	value := utils.Getenv("AN_ENVIRONMENT_VARIABLE", "this is default")
+func TestGetEnvWithMissingValueButWithDefault(test *testing.T) {
+	value := utils.GetEnv("AN_ENVIRONMENT_VARIABLE", "this is default")
 	assert.Equal(test, "this is default", value)
 }
 
-func TestGetenvWithSetValueWithDefault(test *testing.T) {
+func TestGetEnvWithSetValueWithDefault(test *testing.T) {
 	os.Setenv("ANOTHER_ENVIRONMENT_VARIABLE", "this is a value")
-	value := utils.Getenv("ANOTHER_ENVIRONMENT_VARIABLE", "this is default")
+	value := utils.GetEnv("ANOTHER_ENVIRONMENT_VARIABLE", "this is default")
 	assert.Equal(test, "this is a value", value)
 }
 
-func TestGetenvIntWithMissingValueButWithDefault(test *testing.T) {
-	value := utils.GetenvInt("AN_INT_ENVIRONMENT_VARIABLE", 7000)
+func TestGetEnvIntWithMissingValueButWithDefault(test *testing.T) {
+	value := utils.GetEnvInt("AN_INT_ENVIRONMENT_VARIABLE", 7000)
 	assert.Equal(test, 7000, value)
 }
 
-func TestGetenvIntWithSetValueWithDefault(test *testing.T) {
+func TestGetEnvIntWithSetValueWithDefault(test *testing.T) {
 	os.Setenv("ANOTHER_INT_ENVIRONMENT_VARIABLE", "4000")
-	value := utils.GetenvInt("ANOTHER_INT_ENVIRONMENT_VARIABLE", 10000)
+	value := utils.GetEnvInt("ANOTHER_INT_ENVIRONMENT_VARIABLE", 10000)
 	assert.Equal(test, 4000, value)
 }
