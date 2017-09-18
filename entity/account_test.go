@@ -12,7 +12,9 @@ import (
 
 func TestAccountBeforeSave(test *testing.T) {
 	account := entity.Account{Roles: []string{"administrator", "user"}}
+	assert.Equal(test, 0, len(account.ID))
 	account.BeforeSave()
+	assert.Equal(test, 66, len(account.ID))
 	assert.Equal(test, "administrator,user", account.RolesSerialized)
 }
 
