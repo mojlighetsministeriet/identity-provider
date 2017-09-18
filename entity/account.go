@@ -10,7 +10,7 @@ import (
 
 // Account represents an account that can be used to access the system
 type Account struct {
-	ID                 string   `json:"id" gorm:"not null;unique;size:66" validate:"uuid4,required"`
+	ID                 string   `json:"id" gorm:"not null;unique;size:36" validate:"uuid4,required"`
 	Email              string   `json:"email" gorm:"not null;unique;size:100" validate:"email,required"`
 	Roles              []string `json:"roles" gorm:"-"`
 	RolesSerialized    string   `json:"-" gorm:"roles"`
