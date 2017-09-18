@@ -15,7 +15,7 @@ import (
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/service"
 	"github.com/mojlighetsministeriet/identity-provider/token"
-	"github.com/mojlighetsministeriet/identity-provider/utils"
+	"github.com/mojlighetsministeriet/utils"
 	uuid "github.com/satori/go.uuid"
 )
 
