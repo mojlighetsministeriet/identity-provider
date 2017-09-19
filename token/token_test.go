@@ -26,7 +26,7 @@ func TestGenerateAndParseIfValid(test *testing.T) {
 
 	parsedToken, err := token.ParseIfValid(&privateKey.PublicKey, accessToken)
 	assert.NoError(test, err)
-	assert.Equal(test, account.ID, parsedToken.Claims().Get("id").(string))
+	assert.Equal(test, account.ID, parsedToken.Claims().Get("sub").(string))
 	assert.Equal(test, "tech+testing@mojlighetsministerietest.se", parsedToken.Claims().Get("email"))
 	assert.Equal(test, "user", parsedToken.Claims().Get("roles"))
 }

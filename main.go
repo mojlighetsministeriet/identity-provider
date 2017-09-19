@@ -281,13 +281,18 @@ func main() {
 		}{Token: string(newToken)})
 	})
 
-	tokenGroup.POST("/validate", func(context echo.Context) error {
-		_, err := token.ParseIfValid(&identityService.PrivateKey.PublicKey, token.GetTokenFromContext(context))
-		if err == nil {
-			return context.JSONBlob(http.StatusOK, []byte("{\"message\":\"The token is valid\"}"))
+	tokenGroup.POST("/decode", func(context echo.Context) error {
+		parsedToken, err := token.ParseIfValid(&identityService.PrivateKey.PublicKey, token.GetTokenFromContext(context))
+		if err != nil {
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"The token is invalid\"}"))
 		}
 
-		return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"The token is invalid\"}"))
+		json, err := parsedToken.Claims().MarshalJSON()
+		if err != nil {
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"The token is invalid\"}"))
+		}
+
+		return context.JSONBlob(http.StatusOK, json)
 	})
 
 	type routeInfo struct {

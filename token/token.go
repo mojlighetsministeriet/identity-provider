@@ -14,11 +14,12 @@ import (
 // Generate a new JWT token from a user
 func Generate(privateKey *rsa.PrivateKey, account entity.Account) (serializedToken []byte, err error) {
 	claims := jws.Claims{}
-	claims.SetExpiration(time.Now().Add(time.Duration(60*20) * time.Second))
 
 	account.BeforeSave()
 
-	claims.Set("id", account.ID)
+	claims.SetExpiration(time.Now().Add(time.Duration(60*20) * time.Second))
+	claims.SetSubject(account.ID)
+	claims.SetIssuer("identity-provider")
 	claims.Set("email", account.Email)
 	claims.Set("roles", account.RolesSerialized)
 
