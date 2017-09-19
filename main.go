@@ -166,7 +166,7 @@ func main() {
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
 
-		return context.JSON(http.StatusOK, account)
+		return context.JSONBlob(http.StatusOK, []byte("{\"message\":\"Password was reset\"}"))
 	})
 
 	identityService.Router.POST("/account/:id/reset-token", func(context echo.Context) error {
@@ -222,7 +222,7 @@ func main() {
 			),
 		)
 
-		return context.JSON(http.StatusOK, account)
+		return context.JSON(http.StatusOK, []byte("{\"message\":\"Reset token created\"}"))
 	})
 
 	tokenGroup := identityService.Router.Group("/token")
