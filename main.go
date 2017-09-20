@@ -1,6 +1,7 @@
 package main // import "github.com/mojlighetsministeriet/identity-provider"
 
 import (
+	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 	"net/http"
@@ -251,7 +252,7 @@ func main() {
 		newToken, err := token.Generate(identityService.PrivateKey, account)
 		if err != nil {
 			identityService.Log.Error(err)
-			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Internal Server Error\"}"))
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
 
 		return context.JSON(http.StatusCreated, struct {
@@ -265,7 +266,7 @@ func main() {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
 
-		id := parsedToken.Claims().Get("id").(string)
+		id := parsedToken.Claims().Get("sub").(string)
 		account, err := entity.LoadAccountFromID(identityService.DatabaseConnection, id)
 		if err != nil {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
@@ -274,7 +275,7 @@ func main() {
 		newToken, err := token.Generate(identityService.PrivateKey, account)
 		if err != nil {
 			identityService.Log.Error(err)
-			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Internal Server Error\"}"))
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
 
 		return context.JSON(http.StatusCreated, struct {
@@ -299,7 +300,15 @@ func main() {
 	publicKeyGroup := identityService.Router.Group("/public-key")
 	publicKeyGroup.Use(token.JWTRequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "user"))
 	publicKeyGroup.GET("", func(context echo.Context) error {
-		block := pem.Block{}
+		body, err := x509.MarshalPKIXPublicKey(&identityService.PrivateKey.PublicKey)
+		if err != nil {
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
+		block := pem.Block{
+			Type:    "PUBLIC KEY",
+			Headers: nil,
+			Bytes:   body,
+		}
 		key := pem.EncodeToMemory(&block)
 		return context.Blob(http.StatusOK, "application/x-pem-file", key)
 	})
