@@ -1,6 +1,7 @@
 package main // import "github.com/mojlighetsministeriet/identity-provider"
 
 import (
+	"crypto/x509"
 	"fmt"
 	"net/http"
 	"strings"
@@ -293,6 +294,15 @@ func main() {
 		}
 
 		return context.JSONBlob(http.StatusOK, json)
+	})
+
+	identityService.Router.GET("/public-key", func(context echo.Context) error {
+		key, err := x509.MarshalPKIXPublicKey(identityService.PrivateKey.PublicKey)
+		if err != nil {
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
+
+		return context.Blob(http.StatusOK, "application/x-pem-file", key)
 	})
 
 	type routeInfo struct {
