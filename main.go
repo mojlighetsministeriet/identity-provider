@@ -40,7 +40,7 @@ func main() {
 	defer identityService.Close()
 
 	accountGroup := identityService.Router.Group("/account")
-	accountGroup.Use(token.JWTRequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "administrator"))
+	accountGroup.Use(token.RequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "administrator"))
 
 	// TODO: Add better validation error messages
 	accountGroup.POST("", func(context echo.Context) error {
@@ -298,7 +298,7 @@ func main() {
 	})
 
 	publicKeyGroup := identityService.Router.Group("/public-key")
-	publicKeyGroup.Use(token.JWTRequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "user"))
+	publicKeyGroup.Use(token.RequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "user"))
 	publicKeyGroup.GET("", func(context echo.Context) error {
 		body, err := x509.MarshalPKIXPublicKey(&identityService.PrivateKey.PublicKey)
 		if err != nil {
