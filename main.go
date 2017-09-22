@@ -16,8 +16,8 @@ import (
 	"github.com/labstack/echo"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/identity-provider/service"
-	"github.com/mojlighetsministeriet/identity-provider/token"
 	"github.com/mojlighetsministeriet/utils"
+	"github.com/mojlighetsministeriet/utils/jwt"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -40,7 +40,7 @@ func main() {
 	defer identityService.Close()
 
 	accountGroup := identityService.Router.Group("/account")
-	accountGroup.Use(token.RequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "administrator"))
+	accountGroup.Use(jwt.RequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "administrator"))
 
 	// TODO: Add better validation error messages
 	accountGroup.POST("", func(context echo.Context) error {
@@ -249,7 +249,7 @@ func main() {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
 
-		newToken, err := token.Generate(identityService.PrivateKey, account)
+		newToken, err := jwt.Generate("identity-provider", identityService.PrivateKey, account)
 		if err != nil {
 			identityService.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
@@ -261,7 +261,7 @@ func main() {
 	})
 
 	tokenGroup.POST("/renew", func(context echo.Context) error {
-		parsedToken, err := token.ParseIfValid(&identityService.PrivateKey.PublicKey, token.GetTokenFromContext(context))
+		parsedToken, err := jwt.ParseIfValid(&identityService.PrivateKey.PublicKey, jwt.GetTokenFromContext(context))
 		if err != nil {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
@@ -272,7 +272,7 @@ func main() {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
 
-		newToken, err := token.Generate(identityService.PrivateKey, account)
+		newToken, err := jwt.Generate("identity-provider", identityService.PrivateKey, account)
 		if err != nil {
 			identityService.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
@@ -284,7 +284,7 @@ func main() {
 	})
 
 	tokenGroup.POST("/decode", func(context echo.Context) error {
-		parsedToken, err := token.ParseIfValid(&identityService.PrivateKey.PublicKey, token.GetTokenFromContext(context))
+		parsedToken, err := jwt.ParseIfValid(&identityService.PrivateKey.PublicKey, jwt.GetTokenFromContext(context))
 		if err != nil {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"The token is invalid\"}"))
 		}
@@ -298,7 +298,7 @@ func main() {
 	})
 
 	publicKeyGroup := identityService.Router.Group("/public-key")
-	publicKeyGroup.Use(token.RequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "user"))
+	publicKeyGroup.Use(jwt.RequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "user"))
 	publicKeyGroup.GET("", func(context echo.Context) error {
 		body, err := x509.MarshalPKIXPublicKey(&identityService.PrivateKey.PublicKey)
 		if err != nil {
