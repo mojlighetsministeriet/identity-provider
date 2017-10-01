@@ -62,7 +62,7 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 
 // Listen will make the service start listning for incoming requests
 func (service *Service) Listen(address string) (err error) {
-	service.Router.Logger.Error(service.Router.Start(address))
+	err = service.Router.Start(address)
 	return
 }
 

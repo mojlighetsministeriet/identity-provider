@@ -25,7 +25,10 @@ func main() {
 	identityService := service.Service{}
 	err := identityService.Initialize(
 		utils.GetEnv("DATABASE_TYPE", "mysql"),
-		utils.GetFileAsString("/run/secrets/database-connection", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"),
+		utils.GetEnv(
+			"DATABASE_CONNECTION",
+			utils.GetFileAsString("/run/secrets/database-connection", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"),
+		),
 		utils.GetEnv("SMTP_HOST", ""),
 		utils.GetEnvInt("SMTP_PORT", 0),
 		utils.GetEnv("SMTP_EMAIL", ""),
@@ -332,5 +335,8 @@ func main() {
 		return context.JSON(http.StatusOK, registeredRoutes)
 	})
 
-	identityService.Listen(":1323")
+	err = identityService.Listen(":1323")
+	if err != nil {
+		panic(err)
+	}
 }
