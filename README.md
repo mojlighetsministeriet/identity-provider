@@ -8,7 +8,7 @@ Handles the management of accounts (with the properties id, email, roles and pas
 
 **NOTE: This service is still in it's experimental phase,** feel free to try it out, contribute pull requests but for now, expect the functionality to be somewhat limited. E.g. right now there is no way of creating the first administrator account yet. It will be added but we are not there yet. :)
 
-## Philosofy
+## Philosophy
 
 * This service should do as few things as possible but do them well.
 * This service should have as few customization options as humanly possible. There are so many well known alternatives out there that does these things but they require a week or more to get started with.
