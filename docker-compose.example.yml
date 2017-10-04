@@ -5,10 +5,7 @@ services:
   identity-provider:
     image: mojlighetsministeriet/identity-provider:master
     ports:
-      - 80:1323
-    networks:
-      - frontend
-      - backend
+      - 80:80
     depends_on:
       - database
     secrets:
@@ -22,10 +19,19 @@ services:
     deploy:
       replicas: 2
       update_config:
-        parallelism: 2
+        parallelism: 1
         delay: 10s
+        failure_action: continue
+        monitor: 60s
+        max_failure_ratio: 0.3
       restart_policy:
         condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    networks:
+      - backend
+      - default
 
   database:
     image: mariadb:latest
@@ -33,8 +39,6 @@ services:
       - 3306:3306
     volumes:
       - database:/var/lib/mysql
-    networks:
-      - backend
     environment:
       MYSQL_ROOT_PASSWORD: eUYP0mjoTt8YqCJBxa0bcrfN1miLzA
       MYSQL_DATABASE: identity-provider
@@ -43,6 +47,8 @@ services:
     deploy:
       placement:
         constraints: [node.role == manager]
+    networks:
+      - backend
 
   visualizer:
     image: dockersamples/visualizer:stable
@@ -54,11 +60,12 @@ services:
     deploy:
       placement:
         constraints: [node.role == manager]
+    networks:
+      - default
 
 networks:
   backend:
-    internal: true
-  frontend:
+    driver: overlay
 
 volumes:
   database:

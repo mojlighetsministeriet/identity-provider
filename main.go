@@ -23,7 +23,7 @@ import (
 
 func main() {
 	identityService := service.Service{}
-	err := identityService.Initialize(
+	initializeErr := identityService.Initialize(
 		utils.GetEnv("DATABASE_TYPE", "mysql"),
 		utils.GetEnv(
 			"DATABASE_CONNECTION",
@@ -35,9 +35,9 @@ func main() {
 		utils.GetFileAsString("/run/secrets/smtp-password", ""),
 		utils.GetFileAsString("/run/secrets/private-key", ""),
 	)
-	if err != nil {
+	if initializeErr != nil {
 		identityService.Log.Error("Failed to initialize the service, make sure that you provided the correct database credentials.")
-		identityService.Log.Error(err)
+		identityService.Log.Error(initializeErr)
 		panic("Cannot continue due to previous errors.")
 	}
 	defer identityService.Close()
@@ -335,8 +335,8 @@ func main() {
 		return context.JSON(http.StatusOK, registeredRoutes)
 	})
 
-	err = identityService.Listen(":1323")
-	if err != nil {
-		panic(err)
+	listenErr := identityService.Listen(":" + utils.GetEnv("PORT", "80"))
+	if listenErr != nil {
+		panic(listenErr)
 	}
 }
