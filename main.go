@@ -300,7 +300,7 @@ func main() {
 		return context.JSONBlob(http.StatusOK, json)
 	})
 
-	publicKeyGroup.GET("/public-key", func(context echo.Context) error {
+	identityService.Router.GET("/public-key", func(context echo.Context) error {
 		body, err := x509.MarshalPKIXPublicKey(&identityService.PrivateKey.PublicKey)
 		if err != nil {
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
