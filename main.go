@@ -300,9 +300,7 @@ func main() {
 		return context.JSONBlob(http.StatusOK, json)
 	})
 
-	publicKeyGroup := identityService.Router.Group("/public-key")
-	publicKeyGroup.Use(jwt.RequiredRoleMiddleware(&identityService.PrivateKey.PublicKey, "user"))
-	publicKeyGroup.GET("", func(context echo.Context) error {
+	publicKeyGroup.GET("/public-key", func(context echo.Context) error {
 		body, err := x509.MarshalPKIXPublicKey(&identityService.PrivateKey.PublicKey)
 		if err != nil {
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
