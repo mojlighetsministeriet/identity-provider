@@ -1,9 +1,8 @@
 # Run the build
-FROM golang:alpine
+FROM mojlighetsministeriet/go-polymer-faster-build
 ENV WORKDIR /go/src/github.com/mojlighetsministeriet/identity-provider
 COPY . $WORKDIR
 WORKDIR $WORKDIR
-RUN apk --update add git
 RUN go get -t -v ./...
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build
 
