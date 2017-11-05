@@ -24,6 +24,21 @@ type AccountWithPassword struct {
 	Password string `json:"password"`
 }
 
+// GetID returns the ID for the account
+func (account *Account) GetID() string {
+	return account.ID
+}
+
+// GetEmail returns the email for the account
+func (account *Account) GetEmail() string {
+	return account.Email
+}
+
+// GetRolesSerialized returns the roles for the account serialized into a comma separated string
+func (account *Account) GetRolesSerialized() string {
+	return strings.Join(account.Roles, ",")
+}
+
 // BeforeSave will run before the struct is persisted with gorm
 func (account *Account) BeforeSave() {
 	if account.ID == "" {
@@ -82,6 +97,12 @@ func LoadAccountFromEmailAndPassword(databaseConnection *gorm.DB, email string, 
 		account = Account{}
 	}
 
+	return
+}
+
+// LoadAccountFromEmail is used for example when resetting the password for an account
+func LoadAccountFromEmail(databaseConnection *gorm.DB, email string) (account Account, err error) {
+	err = databaseConnection.Where("email = ?", email).First(&account).Error
 	return
 }
 
