@@ -129,27 +129,27 @@ func main() {
 		return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 	})
 
-	identityService.Router.POST("/account/:id/password-reset", func(context echo.Context) error {
+	identityService.Router.POST("/account/reset-token/password", func(context echo.Context) error {
 		type resetPasswordBody struct {
-			ResetToken string `json:"resetToken"`
-			Password   string `json:"password"`
+			Password string `json:"password"`
 		}
 
 		parameters := resetPasswordBody{}
 		context.Bind(&parameters)
 
 		// TODO: Add validation to input parameters
-		if parameters.ResetToken == "" || parameters.Password == "" {
+		if parameters.Password == "" {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
-		// TODO: Add validation to input parameters
-		if parameters.ResetToken == "" {
-			parameters.ResetToken = uuid.NewV4().String()
+		claims, err := jwt.GetClaimsFromContextIfValid(&identityService.PrivateKey.PublicKey, context)
+		if err != nil {
+			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
 
-		account, err := entity.LoadAccountFromID(identityService.DatabaseConnection, context.Param("id"))
-		if err != nil || account.CompareHashedPasswordResetTokenAgainst(parameters.ResetToken) != nil {
+		resetToken := jwt.GetTokenFromContext(context)
+		account, err := entity.LoadAccountFromEmail(identityService.DatabaseConnection, claims.Get("email").(string))
+		if err != nil || account.CompareHashedPasswordResetTokenAgainst(string(resetToken)) != nil {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
 
@@ -175,7 +175,7 @@ func main() {
 		return context.JSONBlob(http.StatusOK, []byte("{\"message\":\"Password was reset\"}"))
 	})
 
-	identityService.Router.POST("/account/reset-password", func(context echo.Context) error {
+	identityService.Router.POST("/account/reset-token", func(context echo.Context) error {
 		type emailBody struct {
 			Email string `json:"email"`
 		}
@@ -209,8 +209,6 @@ func main() {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
-		// TODO: Send email to user
-
 		err = identityService.DatabaseConnection.Save(&account).Error
 		if err != nil {
 			identityService.Log.Error(err)
@@ -232,6 +230,10 @@ func main() {
 				),
 			),
 		)
+		if err != nil {
+			identityService.Log.Error(err)
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
 
 		return context.JSON(http.StatusOK, []byte("{\"message\":\"Reset token created\"}"))
 	})
@@ -258,7 +260,7 @@ func main() {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
 
-		newToken, err := jwt.Generate("identity-provider", identityService.PrivateKey, account)
+		newToken, err := jwt.Generate("identity-provider", identityService.PrivateKey, &account)
 		if err != nil {
 			identityService.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
@@ -281,7 +283,7 @@ func main() {
 			return context.JSONBlob(http.StatusUnauthorized, []byte("{\"message\":\"Unauthorized\"}"))
 		}
 
-		newToken, err := jwt.Generate("identity-provider", identityService.PrivateKey, account)
+		newToken, err := jwt.Generate("identity-provider", identityService.PrivateKey, &account)
 		if err != nil {
 			identityService.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
