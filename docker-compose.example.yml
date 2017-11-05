@@ -31,7 +31,6 @@ services:
         window: 120s
     networks:
       - backend
-      - default
 
   database:
     image: mariadb:latest

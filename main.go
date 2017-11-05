@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"time"
 
 	validator "gopkg.in/go-playground/validator.v9"
 
@@ -174,7 +175,7 @@ func main() {
 		return context.JSONBlob(http.StatusOK, []byte("{\"message\":\"Password was reset\"}"))
 	})
 
-	identityService.Router.POST("/account/:id/reset-token", func(context echo.Context) error {
+	identityService.Router.POST("/account/reset-password", func(context echo.Context) error {
 		type emailBody struct {
 			Email string `json:"email"`
 		}
@@ -182,7 +183,7 @@ func main() {
 		parameters := emailBody{}
 		context.Bind(&parameters)
 
-		account, err := entity.LoadAccountFromID(identityService.DatabaseConnection, context.Param("id"))
+		account, err := entity.LoadAccountFromEmail(identityService.DatabaseConnection, parameters.Email)
 		if err != nil {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
@@ -191,8 +192,13 @@ func main() {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
-		resetToken := uuid.NewV4().String()
-		err = account.SetPasswordResetToken(resetToken)
+		expiration := time.Now().Add(time.Duration(3600) * time.Second)
+		resetToken, err := jwt.GenerateWithCustomExpiration("identity-provider", identityService.PrivateKey, &entity.Account{Email: parameters.Email}, expiration)
+		if err != nil {
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
+		}
+
+		err = account.SetPasswordResetToken(string(resetToken))
 		if err != nil {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
@@ -218,7 +224,7 @@ func main() {
 			utils.GetFileAsString(
 				"EMAIL_ACCOUNT_RESET_BODY",
 				fmt.Sprintf(
-					"You have requested to reset your password, choose your new password by visiting <a href=\"%s/reset-password/%s\" target=\"_blank\">%s/reset-password/%s</a>. If you did not request a password reset you can ignore this message.",
+					"You have requested to reset your password, choose your new password by visiting <a href=\"%s/reset-password/%s\" target=\"_blank\">%s/reset-password/%s</a>. The link is valid in 1 hour. If you did not request a password reset you can ignore this message.",
 					identityService.ExternalURL,
 					resetToken,
 					identityService.ExternalURL,
