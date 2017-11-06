@@ -2,6 +2,7 @@ package service
 
 import (
 	"crypto/rsa"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
@@ -13,6 +14,7 @@ import (
 	"github.com/labstack/gommon/log"
 	"github.com/mojlighetsministeriet/identity-provider/email"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
+	"github.com/mojlighetsministeriet/utils"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -24,10 +26,16 @@ type Service struct {
 	PrivateKey         *rsa.PrivateKey
 	Log                echo.Logger
 	Email              *email.SMTPSender
+	TLSConfig          *tls.Config
 }
 
 // Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
 func (service *Service) Initialize(databaseType string, databaseConnectionString string, smtpHost string, smtpPort int, smtpEmail string, smtpPassword string, rsaKeyPEMString string) (err error) {
+	service.TLSConfig, err = utils.GetCACertificatesTLSConfig()
+	if err != nil {
+		return
+	}
+
 	service.Router = echo.New()
 	service.Router.Use(middleware.Gzip())
 
@@ -35,10 +43,11 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 	service.Log.SetLevel(log.INFO)
 
 	service.Email = &email.SMTPSender{
-		Host:     smtpHost,
-		Port:     smtpPort,
-		Email:    smtpEmail,
-		Password: smtpPassword,
+		Host:      smtpHost,
+		Port:      smtpPort,
+		Email:     smtpEmail,
+		Password:  smtpPassword,
+		TLSConfig: service.TLSConfig,
 	}
 
 	service.DatabaseConnection, err = gorm.Open(databaseType, databaseConnectionString)
