@@ -185,8 +185,6 @@ func main() {
 		parameters := emailBody{}
 		context.Bind(&parameters)
 
-		fmt.Println("before loading account")
-
 		account, err := entity.LoadAccountFromEmail(identityService.DatabaseConnection, parameters.Email)
 		if err != nil {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
@@ -195,8 +193,6 @@ func main() {
 		if account.Email != parameters.Email {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
-
-		fmt.Println("before generating token")
 
 		expiration := time.Now().Add(time.Duration(3600) * time.Second)
 		resetToken, err := jwt.GenerateWithCustomExpiration(
@@ -209,14 +205,10 @@ func main() {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
-		fmt.Println("before setting reset token")
-
 		err = account.SetPasswordResetToken(string(resetToken))
 		if err != nil {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
-
-		fmt.Println("before validation")
 
 		validate := validator.New()
 		err = validate.Struct(account)
@@ -224,15 +216,11 @@ func main() {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
 
-		fmt.Println("before saving account")
-
 		err = identityService.DatabaseConnection.Save(&account).Error
 		if err != nil {
 			identityService.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
-
-		fmt.Println("before sending email")
 
 		// TODO: Email templates should be taken from environment variables
 		err = identityService.Email.Send(
@@ -253,8 +241,6 @@ func main() {
 			identityService.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
-
-		fmt.Println("after sending email")
 
 		return context.JSON(http.StatusOK, []byte("{\"message\":\"Reset token created\"}"))
 	})
