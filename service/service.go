@@ -66,6 +66,11 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 		service.setupPrivateKey(rsaKeyPEMString)
 	}
 
+	service.accountResource()
+	service.tokenResource()
+	service.publicKeyResource()
+	service.indexResource()
+
 	return
 }
 
