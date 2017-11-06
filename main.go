@@ -22,6 +22,8 @@ func main() {
 		utils.GetEnv("SMTP_EMAIL", ""),
 		utils.GetFileAsString("/run/secrets/smtp-password", ""),
 		utils.GetFileAsString("/run/secrets/private-key", ""),
+		utils.GetEnv("RESET_PASSWORD_SUBJECT", ""),
+		utils.GetEnv("RESET_PASSWORD_BODY", ""),
 	)
 
 	if initializeErr != nil {

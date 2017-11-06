@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"html/template"
 
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
@@ -18,6 +19,14 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// EmailTemplates holds templates for all email types that the service can send, they are defined in subject/body pairs
+type EmailTemplates struct {
+	NewAccountSubject   string
+	NewAccountBody      string
+	PasswordRestSubject string
+	PasswordRestBody    string
+}
+
 // Service is the main service that holds web server and database connections and so on
 type Service struct {
 	ExternalURL        string
@@ -27,6 +36,7 @@ type Service struct {
 	Log                echo.Logger
 	Email              *email.SMTPSender
 	TLSConfig          *tls.Config
+	EmailTemplates     EmailTemplates
 }
 
 // Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
@@ -115,6 +125,14 @@ func (service *Service) setupPrivateKey(pemString string) (err error) {
 	service.PrivateKey = privateKey
 
 	return
+}
+
+func (service *Service) populateTemplate(inputTemplate string, inputData interface{}) (output string, err error) {
+	parsedTemplate, err := template.ParseGlob(inputTemplate)
+	if err != nil {
+		return
+	}
+
 }
 
 func pemStringToPrivateKey(pemString string) (privateKey *rsa.PrivateKey, err error) {
