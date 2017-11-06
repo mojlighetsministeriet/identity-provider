@@ -10,6 +10,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestAccountGetID(test *testing.T) {
+	account := entity.Account{ID: uuid.NewV4().String()}
+	assert.Equal(test, account.ID, account.GetID())
+}
+
+func TestAccountGetEmail(test *testing.T) {
+	account := entity.Account{Email: "test@example.com"}
+	assert.Equal(test, account.Email, account.GetEmail())
+}
+
 func TestAccountBeforeSave(test *testing.T) {
 	account := entity.Account{Roles: []string{"administrator", "user"}}
 	assert.Equal(test, 0, len(account.ID))

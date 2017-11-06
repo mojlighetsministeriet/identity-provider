@@ -45,7 +45,7 @@ func (account *Account) BeforeSave() {
 		account.ID = uuid.NewV4().String()
 	}
 
-	account.RolesSerialized = strings.Join(account.Roles, ",")
+	account.RolesSerialized = account.GetRolesSerialized()
 }
 
 // AfterFind will run after the struct has been read from persistence
@@ -87,7 +87,7 @@ func (account *Account) CompareHashedPasswordResetTokenAgainst(passwordResetToke
 
 // LoadAccountFromEmailAndPassword is used when authenticating to verify that email and password combination is valid
 func LoadAccountFromEmailAndPassword(databaseConnection *gorm.DB, email string, password string) (account Account, err error) {
-	err = databaseConnection.Where("email = ?", email).First(&account).Error
+	account, err = LoadAccountFromEmail(databaseConnection, email)
 	if err != nil {
 		return
 	}
