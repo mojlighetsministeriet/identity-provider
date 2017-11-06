@@ -55,8 +55,6 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 		return
 	}
 
-	service.DatabaseConnection.Debug()
-
 	err = service.DatabaseConnection.AutoMigrate(&entity.Account{}).Error
 	if err != nil {
 		return
