@@ -193,7 +193,12 @@ func main() {
 		}
 
 		expiration := time.Now().Add(time.Duration(3600) * time.Second)
-		resetToken, err := jwt.GenerateWithCustomExpiration("identity-provider", identityService.PrivateKey, &entity.Account{Email: parameters.Email}, expiration)
+		resetToken, err := jwt.GenerateWithCustomExpiration(
+			"identity-provider",
+			identityService.PrivateKey,
+			&entity.Account{Email: parameters.Email},
+			expiration,
+		)
 		if err != nil {
 			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Bad Request\"}"))
 		}
