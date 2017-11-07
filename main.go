@@ -4,12 +4,22 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/mssql"
 	_ "github.com/jinzhu/gorm/dialects/mysql"
 	_ "github.com/jinzhu/gorm/dialects/postgres"
+	"github.com/mojlighetsministeriet/identity-provider/email"
 	"github.com/mojlighetsministeriet/identity-provider/service"
 	"github.com/mojlighetsministeriet/utils"
 )
 
 func main() {
 	identityService := service.Service{}
+
+	newAccountTemplate := email.Template{
+		Subject: utils.GetEnv("EMAIL_ACCOUNT_CREATED_SUBJECT", "Your new account"),
+		Body:    utils.GetEnv("EMAIL_ACCOUNT_CREATED_BODY", "You have a new account, choose your password <a href=\"{{.ServiceURL}}/api/reset-password/{{.ResetToken}}\" target=\"_blank\">here</a>."),
+	}
+	resetPasswordTemplate := email.Template{
+		Subject: "",
+		Body:    "",
+	}
 
 	initializeErr := identityService.Initialize(
 		utils.GetEnv("DATABASE_TYPE", "mysql"),
@@ -22,8 +32,8 @@ func main() {
 		utils.GetEnv("SMTP_EMAIL", ""),
 		utils.GetFileAsString("/run/secrets/smtp-password", ""),
 		utils.GetFileAsString("/run/secrets/private-key", ""),
-		utils.GetEnv("RESET_PASSWORD_SUBJECT", ""),
-		utils.GetEnv("RESET_PASSWORD_BODY", ""),
+		newAccountTemplate,
+		resetPasswordTemplate,
 	)
 
 	if initializeErr != nil {

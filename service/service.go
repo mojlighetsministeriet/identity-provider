@@ -7,7 +7,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"html/template"
 
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
@@ -36,11 +35,11 @@ type Service struct {
 	Log                echo.Logger
 	Email              *email.SMTPSender
 	TLSConfig          *tls.Config
-	EmailTemplates     EmailTemplates
+	EmailTemplates     email.Templates
 }
 
 // Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
-func (service *Service) Initialize(databaseType string, databaseConnectionString string, smtpHost string, smtpPort int, smtpEmail string, smtpPassword string, rsaKeyPEMString string) (err error) {
+func (service *Service) Initialize(databaseType string, databaseConnectionString string, smtpHost string, smtpPort int, smtpEmail string, smtpPassword string, rsaKeyPEMString string, newAccountTemplate email.Template, resetPasswordTemplate email.Template) (err error) {
 	service.TLSConfig, err = utils.GetCACertificatesTLSConfig()
 	if err != nil {
 		return
@@ -52,13 +51,17 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 	service.Log = service.Router.Logger
 	service.Log.SetLevel(log.INFO)
 
-	service.Email = &email.SMTPSender{
+	service.EmailTemplates = email.Templates{Sender: &email.SMTPSender{
 		Host:      smtpHost,
 		Port:      smtpPort,
 		Email:     smtpEmail,
 		Password:  smtpPassword,
 		TLSConfig: service.TLSConfig,
-	}
+	}}
+	newAccountTemplate.Name = "new-account"
+	service.EmailTemplates.Add(newAccountTemplate)
+	resetPasswordTemplate.Name = "reset-password"
+	service.EmailTemplates.Add(resetPasswordTemplate)
 
 	service.DatabaseConnection, err = gorm.Open(databaseType, databaseConnectionString)
 	if err != nil {
@@ -75,6 +78,11 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 	if service.PrivateKey == nil || service.PrivateKey.Validate() != nil {
 		service.setupPrivateKey(rsaKeyPEMString)
 	}
+
+	service.Router.GET("/hej", func(context echo.Context) error {
+		fmt.Println(context.Request())
+		return nil
+	})
 
 	service.accountResource()
 	service.tokenResource()
@@ -125,14 +133,6 @@ func (service *Service) setupPrivateKey(pemString string) (err error) {
 	service.PrivateKey = privateKey
 
 	return
-}
-
-func (service *Service) populateTemplate(inputTemplate string, inputData interface{}) (output string, err error) {
-	parsedTemplate, err := template.ParseGlob(inputTemplate)
-	if err != nil {
-		return
-	}
-
 }
 
 func pemStringToPrivateKey(pemString string) (privateKey *rsa.PrivateKey, err error) {

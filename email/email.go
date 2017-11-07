@@ -3,6 +3,7 @@ package email
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
 	"html/template"
 
 	gomail "gopkg.in/gomail.v2"
@@ -35,7 +36,62 @@ func (sender *SMTPSender) Send(to string, subject string, body string) (err erro
 	return
 }
 
-type EmailTemplate struct {
+// Templates can hold templates
+type Templates struct {
+	templates []*Template
+	Sender    *SMTPSender
+}
+
+// Add adds a new template
+func (templates *Templates) Add(emailTemplate Template) {
+	emailTemplate.Compile()
+	templates.templates = append(templates.templates, &emailTemplate)
+}
+
+// Render will generate the subject and body strings from a template
+func (templates *Templates) Render(name string, subjectData interface{}, bodyData interface{}) (subject string, body string, err error) {
+	var templateToRender *Template
+
+	for _, emailTemplate := range templates.templates {
+		if emailTemplate.Name == name {
+			templateToRender = emailTemplate
+			break
+		}
+	}
+
+	if templateToRender == nil {
+		err = errors.New("Template " + name + " is not registered")
+		return
+	}
+
+	subject, err = templateToRender.GetSubject(subjectData)
+	if err != nil {
+		subject = ""
+		return
+	}
+
+	body, err = templateToRender.GetBody(bodyData)
+	if err != nil {
+		subject = ""
+		body = ""
+	}
+
+	return
+}
+
+// RenderAndSend will render a template and send an email
+func (templates *Templates) RenderAndSend(to string, name string, subjectData interface{}, bodyData interface{}) (err error) {
+	subject, body, err := templates.Render(name, subjectData, bodyData)
+	if err != nil {
+		return
+	}
+
+	err = templates.Sender.Send(to, subject, body)
+	return
+}
+
+// Template lets you format emails with go templates
+type Template struct {
 	Name            string
 	Subject         string
 	subjectTemplate *template.Template
@@ -43,7 +99,8 @@ type EmailTemplate struct {
 	bodyTemplate    *template.Template
 }
 
-func (emailTemplate *EmailTemplate) Compile() (err error) {
+// Compile will re-compile the template Subject and Body to templates
+func (emailTemplate *Template) Compile() (err error) {
 	emailTemplate.subjectTemplate, err = template.New("subject").Parse(emailTemplate.Subject)
 	if err != nil {
 		return
@@ -53,8 +110,13 @@ func (emailTemplate *EmailTemplate) Compile() (err error) {
 	return
 }
 
-func (emailTemplate *EmailTemplate) GetSubject(data interface{}) (output string, err error) {
+// GetSubject will return the populated Subject by passing a data map to the function
+func (emailTemplate *Template) GetSubject(data interface{}) (output string, err error) {
 	buffer := new(bytes.Buffer)
+
+	if emailTemplate.subjectTemplate == nil {
+		emailTemplate.Compile()
+	}
 
 	err = emailTemplate.subjectTemplate.Execute(buffer, data)
 	if err != nil {
@@ -66,8 +128,13 @@ func (emailTemplate *EmailTemplate) GetSubject(data interface{}) (output string,
 	return
 }
 
-func (emailTemplate *EmailTemplate) GetBody(data interface{}) (output string, err error) {
+// GetBody will return the populated Body by passing a data map to the function
+func (emailTemplate *Template) GetBody(data interface{}) (output string, err error) {
 	buffer := new(bytes.Buffer)
+
+	if emailTemplate.subjectTemplate == nil {
+		emailTemplate.Compile()
+	}
 
 	err = emailTemplate.subjectTemplate.Execute(buffer, data)
 	if err != nil {
