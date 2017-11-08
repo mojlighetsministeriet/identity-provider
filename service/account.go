@@ -66,6 +66,12 @@ func (service *Service) accountResource() {
 		}
 
 		if account.Password == "" && account.PasswordResetToken != "" {
+			err = service.EmailTemplates.RenderAndSend(
+				account.Email,
+				"new-account",
+				interface{},
+				interface{ServiceURL: service.ExternalURL, ResetToken: resetToken},
+			})
 			// TODO: Email templates should be taken from environment variables
 			err = service.Email.Send(
 				account.Email,
