@@ -12,11 +12,20 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
-	"github.com/mojlighetsministeriet/identity-provider/email"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/utils"
+	"github.com/mojlighetsministeriet/utils/emailtemplates"
+	"github.com/mojlighetsministeriet/utils/httprequest"
 	uuid "github.com/satori/go.uuid"
 )
+
+// EmailTemplates holds templates for all email types that the service can send, they are defined in subject/body pairs
+type EmailTemplates struct {
+	NewAccountSubject   string
+	NewAccountBody      string
+	PasswordRestSubject string
+	PasswordRestBody    string
+}
 
 // Service is the main service that holds web server and database connections and so on
 type Service struct {
@@ -25,12 +34,13 @@ type Service struct {
 	Router             *echo.Echo
 	PrivateKey         *rsa.PrivateKey
 	Log                echo.Logger
-	Email              *email.SMTPSender
 	TLSConfig          *tls.Config
+	EmailTemplates     emailtemplates.Templates
+	HTTPClient         *httprequest.JSONClient
 }
 
 // Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
-func (service *Service) Initialize(databaseType string, databaseConnectionString string, smtpHost string, smtpPort int, smtpEmail string, smtpPassword string, rsaKeyPEMString string) (err error) {
+func (service *Service) Initialize(databaseType string, databaseConnectionString string, rsaKeyPEMString string, newAccountTemplate emailtemplates.Template, resetPasswordTemplate emailtemplates.Template) (err error) {
 	service.TLSConfig, err = utils.GetCACertificatesTLSConfig()
 	if err != nil {
 		return
@@ -42,12 +52,15 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 	service.Log = service.Router.Logger
 	service.Log.SetLevel(log.INFO)
 
-	service.Email = &email.SMTPSender{
-		Host:      smtpHost,
-		Port:      smtpPort,
-		Email:     smtpEmail,
-		Password:  smtpPassword,
-		TLSConfig: service.TLSConfig,
+	service.EmailTemplates = emailtemplates.Templates{}
+	newAccountTemplate.Name = "new-account"
+	service.EmailTemplates.Add(newAccountTemplate)
+	resetPasswordTemplate.Name = "reset-password"
+	service.EmailTemplates.Add(resetPasswordTemplate)
+
+	service.HTTPClient, err = httprequest.NewJSONClient()
+	if err != nil {
+		return
 	}
 
 	service.DatabaseConnection, err = gorm.Open(databaseType, databaseConnectionString)

@@ -6,10 +6,20 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/postgres"
 	"github.com/mojlighetsministeriet/identity-provider/service"
 	"github.com/mojlighetsministeriet/utils"
+	"github.com/mojlighetsministeriet/utils/emailtemplates"
 )
 
 func main() {
 	identityService := service.Service{}
+
+	newAccountTemplate := emailtemplates.Template{
+		Subject: utils.GetEnv("EMAIL_ACCOUNT_CREATED_SUBJECT", "Your new account"),
+		Body:    utils.GetEnv("EMAIL_ACCOUNT_CREATED_BODY", "You have a new account, choose your password <a href=\"{{.ServiceURL}}/api/reset-password/{{.ResetToken}}\" target=\"_blank\">here</a>."),
+	}
+	resetPasswordTemplate := emailtemplates.Template{
+		Subject: utils.GetEnv("EMAIL_ACCOUNT_RESET_SUBJECT", "Password reset"),
+		Body:    utils.GetEnv("EMAIL_ACCOUNT_RESET_BODY", "You have requested a password reset, choose your new password <a href=\"{{.ServiceURL}}/api/reset-password/{{.ResetToken}}\" target=\"_blank\">here</a>. If you did not request a password reset, please ignore this message."),
+	}
 
 	initializeErr := identityService.Initialize(
 		utils.GetEnv("DATABASE_TYPE", "mysql"),
@@ -22,6 +32,8 @@ func main() {
 		utils.GetEnv("SMTP_EMAIL", ""),
 		utils.GetFileAsString("/run/secrets/smtp-password", ""),
 		utils.GetFileAsString("/run/secrets/private-key", ""),
+		newAccountTemplate,
+		resetPasswordTemplate,
 	)
 
 	if initializeErr != nil {
