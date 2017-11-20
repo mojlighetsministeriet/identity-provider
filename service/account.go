@@ -1,7 +1,6 @@
 package service
 
 import (
-	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -9,6 +8,7 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/labstack/echo"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
+	"github.com/mojlighetsministeriet/utils"
 	"github.com/mojlighetsministeriet/utils/jwt"
 	uuid "github.com/satori/go.uuid"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -72,7 +72,7 @@ func (service *Service) accountResource() {
 				struct {
 					ServiceURL string
 					ResetToken string
-				}{service.ExternalURL, resetToken},
+				}{utils.GetOriginalSystemURLFromContext(context), resetToken},
 			)
 			if err != nil {
 				service.Log.Error(err)
@@ -148,8 +148,6 @@ func (service *Service) accountResource() {
 	})
 
 	service.Router.POST("/account/reset-token", func(context echo.Context) error {
-		fmt.Println("start /account/reset-token")
-
 		type emailBody struct {
 			Email string `json:"email"`
 		}
@@ -201,7 +199,7 @@ func (service *Service) accountResource() {
 			struct {
 				ServiceURL string
 				ResetToken string
-			}{service.ExternalURL, string(resetToken)},
+			}{utils.GetOriginalSystemURLFromContext(context), string(resetToken)},
 		)
 		if err != nil {
 			service.Log.Error(err)

@@ -29,7 +29,6 @@ type EmailTemplates struct {
 
 // Service is the main service that holds web server and database connections and so on
 type Service struct {
-	ExternalURL        string
 	DatabaseConnection *gorm.DB
 	Router             *echo.Echo
 	PrivateKey         *rsa.PrivateKey
