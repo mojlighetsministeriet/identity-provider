@@ -12,9 +12,10 @@ import (
 	"github.com/labstack/echo"
 	"github.com/labstack/echo/middleware"
 	"github.com/labstack/gommon/log"
-	"github.com/mojlighetsministeriet/identity-provider/email"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
 	"github.com/mojlighetsministeriet/utils"
+	"github.com/mojlighetsministeriet/utils/emailtemplates"
+	"github.com/mojlighetsministeriet/utils/httprequest"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -33,13 +34,13 @@ type Service struct {
 	Router             *echo.Echo
 	PrivateKey         *rsa.PrivateKey
 	Log                echo.Logger
-	Email              *email.SMTPSender
 	TLSConfig          *tls.Config
-	EmailTemplates     email.Templates
+	EmailTemplates     emailtemplates.Templates
+	HTTPClient         *httprequest.JSONClient
 }
 
 // Initialize will prepeare the service by connecting to database and creating a web server instance (but it will not start listening until service.Listen() is run)
-func (service *Service) Initialize(databaseType string, databaseConnectionString string, smtpHost string, smtpPort int, smtpEmail string, smtpPassword string, rsaKeyPEMString string, newAccountTemplate email.Template, resetPasswordTemplate email.Template) (err error) {
+func (service *Service) Initialize(databaseType string, databaseConnectionString string, rsaKeyPEMString string, newAccountTemplate emailtemplates.Template, resetPasswordTemplate emailtemplates.Template) (err error) {
 	service.TLSConfig, err = utils.GetCACertificatesTLSConfig()
 	if err != nil {
 		return
@@ -51,17 +52,16 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 	service.Log = service.Router.Logger
 	service.Log.SetLevel(log.INFO)
 
-	service.EmailTemplates = email.Templates{Sender: &email.SMTPSender{
-		Host:      smtpHost,
-		Port:      smtpPort,
-		Email:     smtpEmail,
-		Password:  smtpPassword,
-		TLSConfig: service.TLSConfig,
-	}}
+	service.EmailTemplates = emailtemplates.Templates{}
 	newAccountTemplate.Name = "new-account"
 	service.EmailTemplates.Add(newAccountTemplate)
 	resetPasswordTemplate.Name = "reset-password"
 	service.EmailTemplates.Add(resetPasswordTemplate)
+
+	service.HTTPClient, err = httprequest.NewJSONClient()
+	if err != nil {
+		return
+	}
 
 	service.DatabaseConnection, err = gorm.Open(databaseType, databaseConnectionString)
 	if err != nil {
@@ -78,11 +78,6 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 	if service.PrivateKey == nil || service.PrivateKey.Validate() != nil {
 		service.setupPrivateKey(rsaKeyPEMString)
 	}
-
-	service.Router.GET("/hej", func(context echo.Context) error {
-		fmt.Println(context.Request())
-		return nil
-	})
 
 	service.accountResource()
 	service.tokenResource()

@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"github.com/mojlighetsministeriet/identity-provider/service"
+	"github.com/mojlighetsministeriet/utils/emailtemplates"
 	uuid "github.com/satori/go.uuid"
 	"github.com/stretchr/testify/assert"
 )
@@ -24,6 +25,6 @@ func TestServiceInitialize(test *testing.T) {
 	pem := string(pem.EncodeToMemory(block))
 
 	identityService := service.Service{}
-	err = identityService.Initialize("sqlite3", storage, "", 0, "", "", pem)
+	err = identityService.Initialize("sqlite3", storage, pem, emailtemplates.Template{}, emailtemplates.Template{})
 	assert.NoError(test, err)
 }

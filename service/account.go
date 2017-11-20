@@ -9,7 +9,6 @@ import (
 	"github.com/jinzhu/copier"
 	"github.com/labstack/echo"
 	"github.com/mojlighetsministeriet/identity-provider/entity"
-	"github.com/mojlighetsministeriet/utils"
 	"github.com/mojlighetsministeriet/utils/jwt"
 	uuid "github.com/satori/go.uuid"
 	validator "gopkg.in/go-playground/validator.v9"
@@ -66,30 +65,24 @@ func (service *Service) accountResource() {
 		}
 
 		if account.Password == "" && account.PasswordResetToken != "" {
-			err = service.EmailTemplates.RenderAndSend(
-				account.Email,
+			email, err := service.EmailTemplates.Render(
 				"new-account",
-				interface{},
-				interface{ServiceURL: service.ExternalURL, ResetToken: resetToken},
-			})
-			// TODO: Email templates should be taken from environment variables
-			err = service.Email.Send(
 				account.Email,
-				utils.GetFileAsString("EMAIL_ACCOUNT_CREATED_SUBJECT", "Your new account"),
-				utils.GetFileAsString(
-					"EMAIL_ACCOUNT_CREATED_BODY",
-					fmt.Sprintf(
-						"You have a new account, choose your password by visiting <a href=\"%s/reset-password/%s\" target=\"_blank\">%s/reset-password/%s</a>",
-						service.ExternalURL,
-						resetToken,
-						service.ExternalURL,
-						resetToken,
-					),
-				),
+				nil,
+				struct {
+					ServiceURL string
+					ResetToken string
+				}{service.ExternalURL, resetToken},
 			)
-
 			if err != nil {
 				service.Log.Error(err)
+				return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+			}
+
+			err = service.HTTPClient.Post("http://email", email, nil)
+			if err != nil {
+				service.Log.Error(err)
+				return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 			}
 		}
 
@@ -201,21 +194,21 @@ func (service *Service) accountResource() {
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
 
-		// TODO: Email templates should be taken from environment variables
-		err = service.Email.Send(
+		email, err := service.EmailTemplates.Render(
+			"reset-password",
 			account.Email,
-			utils.GetFileAsString("EMAIL_ACCOUNT_RESET_SUBJECT", "Reset your password"),
-			utils.GetFileAsString(
-				"EMAIL_ACCOUNT_RESET_BODY",
-				fmt.Sprintf(
-					"You have requested to reset your password, choose your new password by visiting <a href=\"%s/reset-password/%s\" target=\"_blank\">%s/reset-password/%s</a>. The link is valid in 1 hour. If you did not request a password reset you can ignore this message.",
-					service.ExternalURL,
-					resetToken,
-					service.ExternalURL,
-					resetToken,
-				),
-			),
+			nil,
+			struct {
+				ServiceURL string
+				ResetToken string
+			}{service.ExternalURL, string(resetToken)},
 		)
+		if err != nil {
+			service.Log.Error(err)
+			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
+
+		err = service.HTTPClient.Post("http://email", email, nil)
 		if err != nil {
 			service.Log.Error(err)
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
