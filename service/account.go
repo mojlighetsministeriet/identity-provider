@@ -214,6 +214,6 @@ func (service *Service) accountResource() {
 			return context.JSONBlob(http.StatusInternalServerError, []byte("{\"message\":\"Internal Server Error\"}"))
 		}
 
-		return context.JSON(http.StatusOK, []byte("{\"message\":\"Reset token created\"}"))
+		return context.JSONBlob(http.StatusOK, []byte("{\"message\":\"Reset token created\"}"))
 	})
 }
