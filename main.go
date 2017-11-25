@@ -27,7 +27,10 @@ func main() {
 			"DATABASE_CONNECTION",
 			utils.GetFileAsString("/run/secrets/database-connection", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"),
 		),
-		utils.GetFileAsString("/run/secrets/private-key", ""),
+		utils.GetEnv(
+			"PRIVATE_KEY",
+			utils.GetFileAsString("/run/secrets/private-key", ""),
+		),
 		newAccountTemplate,
 		resetPasswordTemplate,
 	)
