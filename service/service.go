@@ -113,7 +113,7 @@ func (service *Service) setupAdministratorUserIfMissing() (err error) {
 	err = service.DatabaseConnection.Create(&administrator).Error
 	if err == nil {
 		// TODO: Change instructions to work with refactored version of the end points
-		service.Log.Info(fmt.Sprintf("No account with administrator found, created a new account with email %s and reset token %s, reset password by POST account/%s/password-reset { \"resetToken\": \"%s\", \"password\": \"yournewpassword\" }", administrator.Email, resetToken, administrator.ID, resetToken))
+		service.Log.Info(fmt.Sprintf("No account with administrator found, created a new account with email %s and reset token %s, reset password by POST account/reset-token/password Authorization: Bearer %s { \"password\": \"yournewpassword\" }", administrator.Email, resetToken, resetToken))
 	}
 
 	return
