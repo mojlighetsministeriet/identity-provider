@@ -36,10 +36,14 @@ func TestMain(test *testing.T) {
 
 	os.Setenv("PORT", "3526")
 	os.Setenv("DATABASE_TYPE", "sqlite3")
-	os.Remove("testMain.db")
-	os.Setenv("DATABASE_CONNECTION", "testMain.db")
+	os.Remove("testMain1.db")
+	os.Setenv("DATABASE_CONNECTION", "testMain1.db")
 	os.Setenv("PRIVATE_KEY", key)
 	os.Setenv("EMAIL_ACCOUNT_RESET_BODY", "En återställning av lösenord har begärts, återställningslänken är giltig i en timme. Om det inte är du begärt återställningen så kan du ignorera denna e-post.<br><br><a href=\"{{.ServiceURL}}/reset-password?token={{.ResetToken}}\" target=\"_blank\">Följ länken</a> för att återställa ditt lösenord.<br><br>Allt gott!<br>Möjlighetsministeriet<br><img src=\"{{.ServiceURL}}/assets/images/mojlighetsministeriet-224.png\" alt=\"Möjlighetsministeriets logotyp\">")
+
+	defer func() {
+		os.Remove("testMain1.db")
+	}()
 
 	go func() {
 		main()
@@ -64,8 +68,8 @@ func TestFailMainByListeningToInvalidPort(test *testing.T) {
 
 	os.Setenv("PORT", "1")
 	os.Setenv("DATABASE_TYPE", "sqlite3")
-	os.Remove("testMain.db")
-	os.Setenv("DATABASE_CONNECTION", "testMain.db")
+	os.Remove("testMain2.db")
+	os.Setenv("DATABASE_CONNECTION", "testMain2.db")
 	os.Setenv("PRIVATE_KEY", key)
 
 	go func() {
@@ -73,6 +77,7 @@ func TestFailMainByListeningToInvalidPort(test *testing.T) {
 			if recovery := recover(); recovery != nil {
 				assert.Equal(test, true, true)
 			}
+			os.Remove("testMain2.db")
 		}()
 		main()
 	}()
@@ -83,5 +88,30 @@ func TestFailMainByListeningToInvalidPort(test *testing.T) {
 	assert.NoError(test, err)
 
 	_, err = client.Get("http://localhost:1/")
+	assert.Error(test, err)
+}
+
+func TestFailMainByInvalidDatabaseType(test *testing.T) {
+	os.Setenv("PORT", "5433")
+	os.Setenv("DATABASE_TYPE", "invalid")
+	os.Remove("testMain3.db")
+	os.Setenv("DATABASE_CONNECTION", "testMain3.db")
+
+	go func() {
+		defer func() {
+			if recovery := recover(); recovery != nil {
+				assert.Equal(test, true, true)
+			}
+			os.Remove("testMain3.db")
+		}()
+		main()
+	}()
+
+	time.Sleep(500 * time.Millisecond)
+
+	client, err := httprequest.NewClient()
+	assert.NoError(test, err)
+
+	_, err = client.Get("http://localhost:5433/")
 	assert.Error(test, err)
 }
