@@ -55,3 +55,33 @@ func TestMain(test *testing.T) {
 	fmt.Println(string(index))
 	assert.Equal(test, true, len(string(index)) > 100)
 }
+
+func TestFailMainByListeningToInvalidPort(test *testing.T) {
+	key, err := generatePrivateKey()
+	if err != nil {
+		panic(err)
+	}
+
+	os.Setenv("PORT", "1")
+	os.Setenv("DATABASE_TYPE", "sqlite3")
+	os.Remove("testMain.db")
+	os.Setenv("DATABASE_CONNECTION", "testMain.db")
+	os.Setenv("PRIVATE_KEY", key)
+
+	go func() {
+		defer func() {
+			if recovery := recover(); recovery != nil {
+				assert.Equal(test, true, true)
+			}
+		}()
+		main()
+	}()
+
+	time.Sleep(500 * time.Millisecond)
+
+	client, err := httprequest.NewClient()
+	assert.NoError(test, err)
+
+	_, err = client.Get("http://localhost:1/")
+	assert.Error(test, err)
+}
