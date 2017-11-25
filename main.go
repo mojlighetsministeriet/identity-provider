@@ -23,13 +23,15 @@ func main() {
 
 	initializeErr := identityService.Initialize(
 		utils.GetEnv("DATABASE_TYPE", "mysql"),
-		utils.GetEnv(
-			"DATABASE_CONNECTION",
-			utils.GetFileAsString("/run/secrets/database-connection", "user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm"),
+		utils.GetFileAsString("/run/secrets/database-connection",
+			utils.GetEnv(
+				"DATABASE_CONNECTION",
+				"user:password@/dbname?charset=utf8mb4,utf8&parseTime=True&loc=Europe/Stockholm",
+			),
 		),
-		utils.GetEnv(
-			"PRIVATE_KEY",
-			utils.GetFileAsString("/run/secrets/private-key", ""),
+		utils.GetFileAsString(
+			"/run/secrets/private-key",
+			utils.GetEnv("PRIVATE_KEY", ""),
 		),
 		newAccountTemplate,
 		resetPasswordTemplate,
