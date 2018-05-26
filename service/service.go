@@ -107,7 +107,7 @@ func (service *Service) setupAdministratorUserIfMissing() (err error) {
 
 	administrator.Email = "administrator@identity-provider.localhost"
 	administrator.Roles = []string{"user", "administrator"}
-	resetToken := uuid.NewV4().String()
+	resetToken := uuid.Must(uuid.NewV4()).String()
 	administrator.SetPasswordResetToken(resetToken)
 
 	err = service.DatabaseConnection.Create(&administrator).Error

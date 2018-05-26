@@ -16,7 +16,7 @@ import (
 )
 
 func TestServiceInitialize(test *testing.T) {
-	storage := "test-storage-" + uuid.NewV4().String() + ".db"
+	storage := "test-storage-" + uuid.Must(uuid.NewV4()).String() + ".db"
 	defer os.Remove(storage)
 
 	privateKey, err := rsa.GenerateKey(rand.Reader, 512)

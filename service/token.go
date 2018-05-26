@@ -24,7 +24,7 @@ func (service *Service) tokenResource() {
 		// TODO: Add validation to input parameters
 		// Set an invalid password if password was empty
 		if parameters.Password == "" {
-			parameters.Password = uuid.NewV4().String()
+			parameters.Password = uuid.Must(uuid.NewV4()).String()
 		}
 
 		account, err := entity.LoadAccountFromEmailAndPassword(service.DatabaseConnection, parameters.Email, parameters.Password)

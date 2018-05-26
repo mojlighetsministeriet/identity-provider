@@ -42,7 +42,7 @@ func (account *Account) GetRolesSerialized() string {
 // BeforeSave will run before the struct is persisted with gorm
 func (account *Account) BeforeSave() {
 	if account.ID == "" {
-		account.ID = uuid.NewV4().String()
+		account.ID = uuid.Must(uuid.NewV4()).String()
 	}
 
 	account.RolesSerialized = account.GetRolesSerialized()

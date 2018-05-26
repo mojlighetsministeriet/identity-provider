@@ -29,7 +29,7 @@ func (service *Service) accountResource() {
 		account := entity.Account{}
 		copier.Copy(&account, &entityWithPassword)
 
-		resetToken := uuid.NewV4().String()
+		resetToken := uuid.Must(uuid.NewV4()).String()
 		if account.Password == "" {
 			err = account.SetPasswordResetToken(resetToken)
 			if err != nil {
@@ -44,7 +44,7 @@ func (service *Service) accountResource() {
 		}
 
 		if account.ID == "" {
-			account.ID = uuid.NewV4().String()
+			account.ID = uuid.Must(uuid.NewV4()).String()
 		}
 
 		validate := validator.New()

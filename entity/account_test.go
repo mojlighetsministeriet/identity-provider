@@ -11,7 +11,7 @@ import (
 )
 
 func TestAccountGetID(test *testing.T) {
-	account := entity.Account{ID: uuid.NewV4().String()}
+	account := entity.Account{ID: uuid.Must(uuid.NewV4()).String()}
 	assert.Equal(test, account.ID, account.GetID())
 }
 
@@ -51,14 +51,14 @@ func TestAccountCompareHashedPasswordResetTokenAgainst(test *testing.T) {
 }
 
 func TestAccountLoadAccountFromID(test *testing.T) {
-	databaseConnection, err := gorm.Open("sqlite3", "/tmp/identity-provider-test-"+uuid.NewV4().String()+".db")
+	databaseConnection, err := gorm.Open("sqlite3", "/tmp/identity-provider-test-"+uuid.Must(uuid.NewV4()).String()+".db")
 	assert.NoError(test, err)
 	defer databaseConnection.Close()
 
 	err = databaseConnection.AutoMigrate(&entity.Account{}).Error
 	assert.NoError(test, err)
 
-	account := entity.Account{ID: uuid.NewV4().String(), Email: "user@example.com"}
+	account := entity.Account{ID: uuid.Must(uuid.NewV4()).String(), Email: "user@example.com"}
 	err = databaseConnection.Create(&account).Error
 	assert.NoError(test, err)
 
@@ -69,14 +69,14 @@ func TestAccountLoadAccountFromID(test *testing.T) {
 }
 
 func TestAccountLoadAccountFromEmailAndPassword(test *testing.T) {
-	databaseConnection, err := gorm.Open("sqlite3", "/tmp/identity-provider-test-"+uuid.NewV4().String()+".db")
+	databaseConnection, err := gorm.Open("sqlite3", "/tmp/identity-provider-test-"+uuid.Must(uuid.NewV4()).String()+".db")
 	assert.NoError(test, err)
 	defer databaseConnection.Close()
 
 	err = databaseConnection.AutoMigrate(&entity.Account{}).Error
 	assert.NoError(test, err)
 
-	account := entity.Account{ID: uuid.NewV4().String(), Email: "user@example.com"}
+	account := entity.Account{ID: uuid.Must(uuid.NewV4()).String(), Email: "user@example.com"}
 	account.SetPassword("mysecretpassword")
 	err = databaseConnection.Create(&account).Error
 	assert.NoError(test, err)
@@ -88,14 +88,14 @@ func TestAccountLoadAccountFromEmailAndPassword(test *testing.T) {
 }
 
 func TestAccountLoadAccountFromEmailAndPasswordWithInvalidPassword(test *testing.T) {
-	databaseConnection, err := gorm.Open("sqlite3", "/tmp/identity-provider-test-"+uuid.NewV4().String()+".db")
+	databaseConnection, err := gorm.Open("sqlite3", "/tmp/identity-provider-test-"+uuid.Must(uuid.NewV4()).String()+".db")
 	assert.NoError(test, err)
 	defer databaseConnection.Close()
 
 	err = databaseConnection.AutoMigrate(&entity.Account{}).Error
 	assert.NoError(test, err)
 
-	account := entity.Account{ID: uuid.NewV4().String(), Email: "user@example.com"}
+	account := entity.Account{ID: uuid.Must(uuid.NewV4()).String(), Email: "user@example.com"}
 	account.SetPassword("mysecretpassword")
 	err = databaseConnection.Create(&account).Error
 	assert.NoError(test, err)
@@ -106,14 +106,14 @@ func TestAccountLoadAccountFromEmailAndPasswordWithInvalidPassword(test *testing
 }
 
 func TestAccountLoadAccountFromEmailAndPasswordWithInvalidEmail(test *testing.T) {
-	databaseConnection, err := gorm.Open("sqlite3", "/tmp/identity-provider-test-"+uuid.NewV4().String()+".db")
+	databaseConnection, err := gorm.Open("sqlite3", "/tmp/identity-provider-test-"+uuid.Must(uuid.NewV4()).String()+".db")
 	assert.NoError(test, err)
 	defer databaseConnection.Close()
 
 	err = databaseConnection.AutoMigrate(&entity.Account{}).Error
 	assert.NoError(test, err)
 
-	account := entity.Account{ID: uuid.NewV4().String(), Email: "user@example.com"}
+	account := entity.Account{ID: uuid.Must(uuid.NewV4()).String(), Email: "user@example.com"}
 	account.SetPassword("mysecretpassword")
 	err = databaseConnection.Create(&account).Error
 	assert.NoError(test, err)
