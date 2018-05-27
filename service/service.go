@@ -7,6 +7,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jinzhu/gorm"
 	"github.com/labstack/echo"
@@ -16,6 +17,7 @@ import (
 	"github.com/mojlighetsministeriet/utils"
 	"github.com/mojlighetsministeriet/utils/emailtemplates"
 	"github.com/mojlighetsministeriet/utils/httprequest"
+	"github.com/mojlighetsministeriet/utils/jwt"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -72,11 +74,14 @@ func (service *Service) Initialize(databaseType string, databaseConnectionString
 		return
 	}
 
-	service.setupAdministratorUserIfMissing()
-
 	if service.PrivateKey == nil || service.PrivateKey.Validate() != nil {
-		service.setupPrivateKey(rsaKeyPEMString)
+		err = service.setupPrivateKey(rsaKeyPEMString)
+		if err != nil {
+			return
+		}
 	}
+
+	service.setupAdministratorUserIfMissing()
 
 	service.accountResource()
 	service.tokenResource()
@@ -105,15 +110,30 @@ func (service *Service) setupAdministratorUserIfMissing() (err error) {
 		return
 	}
 
+	administrator.ID = uuid.Must(uuid.NewV4()).String()
 	administrator.Email = "administrator@identity-provider.localhost"
 	administrator.Roles = []string{"user", "administrator"}
-	resetToken := uuid.Must(uuid.NewV4()).String()
-	administrator.SetPasswordResetToken(resetToken)
+
+	expiration := time.Now().Add(time.Duration(3600) * time.Second)
+	resetToken, err := jwt.GenerateWithCustomExpiration(
+		"identity-provider",
+		service.PrivateKey,
+		&administrator,
+		expiration,
+	)
+	if err != nil {
+		return
+	}
+
+	err = administrator.SetPasswordResetToken(string(resetToken))
+	if err != nil {
+		return
+	}
 
 	err = service.DatabaseConnection.Create(&administrator).Error
 	if err == nil {
 		// TODO: Change instructions to work with refactored version of the end points
-		service.Log.Info(fmt.Sprintf("No account with administrator found, created a new account with email %s and reset token %s, reset password by POST account/reset-token/password Authorization: Bearer %s { \"password\": \"yournewpassword\" }", administrator.Email, resetToken, resetToken))
+		service.Log.Info(fmt.Sprintf("No account with administrator found, created a new account with email %s and reset token %s, reset password by POST account/reset-token/password Authorization: Bearer %s { \"password\": \"yournewpassword\" }", administrator.Email, string(resetToken), string(resetToken)))
 	}
 
 	return

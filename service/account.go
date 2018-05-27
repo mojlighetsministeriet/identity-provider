@@ -29,9 +29,20 @@ func (service *Service) accountResource() {
 		account := entity.Account{}
 		copier.Copy(&account, &entityWithPassword)
 
-		resetToken := uuid.Must(uuid.NewV4()).String()
+		expiration := time.Now().Add(time.Duration(3600*24*7) * time.Second)
+		resetToken, err := jwt.GenerateWithCustomExpiration(
+			"identity-provider",
+			service.PrivateKey,
+			&account,
+			expiration,
+		)
+		if err != nil {
+			service.Log.Error(err)
+			return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Internal Server Error\"}"))
+		}
+
 		if account.Password == "" {
-			err = account.SetPasswordResetToken(resetToken)
+			err = account.SetPasswordResetToken(string(resetToken))
 			if err != nil {
 				service.Log.Error(err)
 				return context.JSONBlob(http.StatusBadRequest, []byte("{\"message\":\"Internal Server Error\"}"))
@@ -72,7 +83,7 @@ func (service *Service) accountResource() {
 				struct {
 					ServiceURL string
 					ResetToken string
-				}{utils.GetOriginalSystemURLFromContext(context), resetToken},
+				}{utils.GetOriginalSystemURLFromContext(context), string(resetToken)},
 			)
 			if err != nil {
 				service.Log.Error(err)
